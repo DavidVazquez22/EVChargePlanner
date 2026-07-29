@@ -1,8 +1,13 @@
+using EVChargePlanner.Domain;
+using EVChargePlanner.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddHttpClient<IPriceProvider, NorwayPriceProvider>();
 
 var app = builder.Build();
 
@@ -32,6 +37,12 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+app.MapGet("/test-prices", async (IPriceProvider priceProvider) =>
+{
+    var prices = await priceProvider.GetPricesAsync(DateOnly.FromDateTime(DateTime.Today), "NO1");
+    return Results.Ok(prices);
+});
 
 app.Run();
 

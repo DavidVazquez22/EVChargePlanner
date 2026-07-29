@@ -2,4 +2,5 @@
   <Project Path="EVChargePlanner.Api/EVChargePlanner.Api.csproj" />
   <Project Path="EVChargePlanner.Domain/EVChargePlanner.Domain.csproj" />
   <Project Path="EVChargePlanner.Infrastructure/EVChargePlanner.Infrastructure.csproj" />
+  <Project Path="EVChargePlanner.Tests/EVChargePlanner.Tests.csproj" />
 </Solution>

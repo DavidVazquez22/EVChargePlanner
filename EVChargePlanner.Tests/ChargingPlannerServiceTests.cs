@@ -56,4 +56,69 @@ public class ChargingPlannerServiceTests
             PriceZone = "NO1"
         };
     }
+
+    [Fact]
+    public void PlanForMultipleCars_PrioritizesUrgentCarForCheapestSlot()
+    {
+        var service = new ChargingPlannerService();
+        var baseDate = new DateTime(2026, 1, 1);
+
+        var prices = new List<PriceRecord>
+        {
+            CreatePrice(baseDate, hour: 0, price: 0.5m),
+            CreatePrice(baseDate, hour: 1, price: 0.5m),
+            CreatePrice(baseDate, hour: 2, price: 3.0m),
+            CreatePrice(baseDate, hour: 3, price: 3.0m),
+            CreatePrice(baseDate, hour: 4, price: 3.0m),
+            CreatePrice(baseDate, hour: 5, price: 3.0m),
+        };
+
+        var urgentCar = new Car
+        {
+            Id = 1,
+            Name = "Urgent",
+            BatteryCapacityKWh = 40,
+            MaxChargingPowerKW = 20,
+            CurrentBatteryPercentage = 0,
+            TargetBatteryPercentage = 100,
+            DepartureTime = baseDate.AddHours(2)
+        };
+
+        var flexibleCar = new Car
+        {
+            Id = 2,
+            Name = "Flexible",
+            BatteryCapacityKWh = 40,
+            MaxChargingPowerKW = 20,
+            CurrentBatteryPercentage = 0,
+            TargetBatteryPercentage = 100,
+            DepartureTime = null
+        };
+
+        var result = service.PlanForMultipleCars(
+            new List<Car> { flexibleCar, urgentCar },
+            prices,
+            numberOfChargers: 1);
+
+        var urgentPlan = result.Single(r => r.Car.Id == 1);
+        var flexiblePlan = result.Single(r => r.Car.Id == 2);
+
+        Assert.NotNull(urgentPlan.Window);
+        Assert.Equal(baseDate, urgentPlan.Window!.StartTime);
+
+        Assert.NotNull(flexiblePlan.Window);
+        Assert.NotEqual(baseDate, flexiblePlan.Window!.StartTime);
+    }
+
+    private static PriceRecord CreatePrice(DateTime baseDate, int hour, decimal price)
+    {
+        return new PriceRecord
+        {
+            TimeStart = baseDate.AddHours(hour),
+            TimeEnd = baseDate.AddHours(hour + 1),
+            PricePerKWh = price,
+            Currency = "NOK",
+            PriceZone = "NO1"
+        };
+    }
 }

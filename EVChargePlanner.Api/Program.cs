@@ -1,5 +1,7 @@
 using EVChargePlanner.Domain;
 using EVChargePlanner.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using EVChargePlanner.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +10,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 builder.Services.AddHttpClient<IPriceProvider, NorwayPriceProvider>();
+
+builder.Services.AddDbContext<EVChargePlannerDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddHostedService<PriceUpdateBackgroundService>();
 
 var app = builder.Build();
 

@@ -2,6 +2,7 @@ using EVChargePlanner.Domain;
 using EVChargePlanner.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using EVChargePlanner.Infrastructure;
+using EVChargePlanner.Domain.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +17,13 @@ builder.Services.AddDbContext<EVChargePlannerDbContext>(options =>
 
 builder.Services.AddHostedService<PriceUpdateBackgroundService>();
 
+builder.Services.AddScoped<ChargingPlannerService>();
+
+builder.Services.AddControllers();
+
 var app = builder.Build();
+
+app.MapControllers();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -20,6 +20,34 @@ public class EVChargePlannerDbContext : DbContext
         modelBuilder.Entity<PriceRecord>()
             .HasIndex(p => new { p.TimeStart, p.PriceZone })
             .IsUnique();
+
+        var dateTimeConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime, DateTime>(
+            v => v.Kind == DateTimeKind.Utc ? v : DateTime.SpecifyKind(v, DateTimeKind.Utc),
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+        var nullableDateTimeConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime?, DateTime?>(
+            v => v.HasValue ? (v.Value.Kind == DateTimeKind.Utc ? v.Value : DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)) : v,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
+
+        modelBuilder.Entity<Car>()
+            .Property(c => c.DepartureTime)
+            .HasConversion(nullableDateTimeConverter);
+
+        modelBuilder.Entity<PriceRecord>()
+            .Property(p => p.TimeStart)
+            .HasConversion(dateTimeConverter);
+
+        modelBuilder.Entity<PriceRecord>()
+            .Property(p => p.TimeEnd)
+            .HasConversion(dateTimeConverter);
+
+        modelBuilder.Entity<ChargingSession>()
+            .Property(s => s.StartTime)
+            .HasConversion(dateTimeConverter);
+
+        modelBuilder.Entity<ChargingSession>()
+            .Property(s => s.EndTime)
+            .HasConversion(dateTimeConverter);
     }
 
 }

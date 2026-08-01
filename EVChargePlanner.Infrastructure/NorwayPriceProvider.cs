@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using EVChargePlanner.Domain;
+using System.Text.Json.Serialization;
 
 namespace EVChargePlanner.Infrastructure;
 
@@ -33,5 +34,10 @@ public class NorwayPriceProvider : IPriceProvider
         }).ToList();
     }
 
-    private record NorwayPriceDto(decimal NOK_per_kWh, decimal EUR_per_kWh, DateTime TimeStart, DateTime TimeEnd);
+    private record NorwayPriceDto(
+        decimal NOK_per_kWh,
+        decimal EUR_per_kWh,
+        [property: JsonPropertyName("time_start")] DateTime TimeStart,
+        [property: JsonPropertyName("time_end")] DateTime TimeEnd
+    );
 }

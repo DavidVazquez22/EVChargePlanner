@@ -55,7 +55,6 @@ public class PriceUpdateBackgroundService : BackgroundService
         var newPrices = deduplicatedPrices
             .Where(p => !existingTimestamps.Contains(p.TimeStart))
             .ToList();
-
         if (newPrices.Count > 0)
         {
             dbContext.PriceRecords.AddRange(newPrices);

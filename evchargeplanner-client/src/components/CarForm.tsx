@@ -12,9 +12,6 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
   const [name, setName] = useState('');
   const [batteryCapacityKWh, setBatteryCapacityKWh] = useState('');
   const [maxChargingPowerKW, setMaxChargingPowerKW] = useState('');
-  const [currentBatteryPercentage, setCurrentBatteryPercentage] = useState('');
-  const [targetBatteryPercentage, setTargetBatteryPercentage] = useState('');
-  const [departureTime, setDepartureTime] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -24,16 +21,10 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
       setName(initialData.name);
       setBatteryCapacityKWh(String(initialData.batteryCapacityKWh));
       setMaxChargingPowerKW(String(initialData.maxChargingPowerKW));
-      setCurrentBatteryPercentage(String(initialData.currentBatteryPercentage));
-      setTargetBatteryPercentage(String(initialData.targetBatteryPercentage));
-      setDepartureTime(initialData.departureTime ? initialData.departureTime.slice(0, 16) : '');
     } else {
       setName('');
       setBatteryCapacityKWh('');
       setMaxChargingPowerKW('');
-      setCurrentBatteryPercentage('');
-      setTargetBatteryPercentage('');
-      setDepartureTime('');
     }
   }, [initialData]);
 
@@ -48,9 +39,6 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
         name,
         batteryCapacityKWh: Number(batteryCapacityKWh),
         maxChargingPowerKW: Number(maxChargingPowerKW),
-        currentBatteryPercentage: Number(currentBatteryPercentage),
-        targetBatteryPercentage: Number(targetBatteryPercentage),
-        departureTime: departureTime ? new Date(departureTime).toISOString() : null,
       });
 
       setSuccess(true);
@@ -60,9 +48,6 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
         setName('');
         setBatteryCapacityKWh('');
         setMaxChargingPowerKW('');
-        setCurrentBatteryPercentage('');
-        setTargetBatteryPercentage('');
-        setDepartureTime('');
       }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data?.errors) {
@@ -96,21 +81,6 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
       <div>
         <label>Max Charging Power (kW)</label>
         <input type="number" step="0.1" value={maxChargingPowerKW} onChange={(e) => setMaxChargingPowerKW(e.target.value)} required />
-      </div>
-
-      <div>
-        <label>Current Battery (%)</label>
-        <input type="number" min="0" max="100" value={currentBatteryPercentage} onChange={(e) => setCurrentBatteryPercentage(e.target.value)} required />
-      </div>
-
-      <div>
-        <label>Target Battery (%)</label>
-        <input type="number" min="0" max="100" value={targetBatteryPercentage} onChange={(e) => setTargetBatteryPercentage(e.target.value)} required />
-      </div>
-
-      <div>
-        <label>Departure Time (optional)</label>
-        <input type="datetime-local" value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} />
       </div>
 
       <button type="submit" disabled={submitting}>

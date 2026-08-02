@@ -1,9 +1,10 @@
 import api from './api';
-import type { CarChargingPlan } from '../types/ChargingPlan';
+import type { CarChargingPlan, CarChargeRequest } from '../types/ChargingPlan';
 
-export const getChargingPlan = async (zone: string = 'NO1'): Promise<CarChargingPlan[]> => {
-  const response = await api.get<CarChargingPlan[]>('/charging-plan', {
-    params: { zone },
-  });
+export const requestChargingPlan = async (
+  cars: CarChargeRequest[],
+  zone: string = 'NO1'
+): Promise<CarChargingPlan[]> => {
+  const response = await api.post<CarChargingPlan[]>('/charging-plan', { cars, zone });
   return response.data;
 };

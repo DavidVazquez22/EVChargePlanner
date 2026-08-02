@@ -3,8 +3,5 @@ export interface Car {
   name: string;
   batteryCapacityKWh: number;
   maxChargingPowerKW: number;
-  currentBatteryPercentage: number;
-  targetBatteryPercentage: number;
-  departureTime: string | null;
   chargingSessions: unknown[];
 }

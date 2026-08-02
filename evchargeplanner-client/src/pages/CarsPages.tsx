@@ -76,9 +76,6 @@ const CarsPage = () => {
               <td>{car.name}</td>
               <td>{car.batteryCapacityKWh} kWh</td>
               <td>{car.maxChargingPowerKW} kW</td>
-              <td>{car.currentBatteryPercentage}%</td>
-              <td>{car.targetBatteryPercentage}%</td>
-              <td>{car.departureTime ? new Date(car.departureTime).toLocaleString() : 'Flexible'}</td>
               <td>
                 <div className="action-buttons">
                     <button onClick={() => setEditingCar(car)}>Edit</button>

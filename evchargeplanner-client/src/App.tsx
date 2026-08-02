@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import { isAuthenticated } from './services/authService';
 import CarsPage from './pages/CarsPages';
+import PlanRequestPage from './pages/PlanRequestPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated() ? children : <Navigate to="/login" />;
@@ -28,8 +29,17 @@ function App() {
             <ProtectedRoute>
               <CarsPage />
     </ProtectedRoute>
-  }
-/>
+          }
+        />
+        <Route
+          path="/plan"
+          element={
+            <ProtectedRoute>
+              <PlanRequestPage />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
     </BrowserRouter>
   );

@@ -1,5 +1,3 @@
-import type { Car } from "./Car";
-
 export interface ChargingWindow {
   startTime: string;
   endTime: string;
@@ -7,6 +5,18 @@ export interface ChargingWindow {
 }
 
 export interface CarChargingPlan {
-  car: Car;
+  car: {
+    id: number;
+    name: string;
+    batteryCapacityKWh: number;
+    maxChargingPowerKW: number;
+  };
   window: ChargingWindow | null;
+}
+
+export interface CarChargeRequest {
+  carId: number;
+  currentBatteryPercentage: number;
+  targetBatteryPercentage: number;
+  departureTime: string | null;
 }

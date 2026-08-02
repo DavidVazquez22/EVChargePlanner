@@ -6,4 +6,5 @@ export interface Car {
   currentBatteryPercentage: number;
   targetBatteryPercentage: number;
   departureTime: string | null;
+  chargingSessions: unknown[];
 }

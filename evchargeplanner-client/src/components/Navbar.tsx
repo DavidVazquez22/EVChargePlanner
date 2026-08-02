@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { logout } from '../services/authService';
 
 const Navbar = () => {
@@ -11,7 +11,9 @@ const Navbar = () => {
 
   return (
     <nav>
-      <span>FleetManager</span>
+      <Link to="/dashboard">Dashboard</Link>
+      <Link to="/cars">Cars</Link>
+      <span>EVChagerPlanner</span>
       <button onClick={handleLogout}>Logout</button>
     </nav>
   );

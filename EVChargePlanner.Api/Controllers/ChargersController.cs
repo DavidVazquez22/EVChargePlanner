@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EVChargePlanner.Domain;
 using EVChargePlanner.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 
 namespace EVChargePlanner.Api.Controllers;
 
@@ -16,12 +17,14 @@ public class ChargersController : ControllerBase
         _context = context;
     }
 
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<List<Charger>>> GetAll()
     {
         return Ok(await _context.Chargers.ToListAsync());
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<Charger>> Create(Charger charger)
     {
@@ -30,6 +33,7 @@ public class ChargersController : ControllerBase
         return CreatedAtAction(nameof(GetAll), charger);
     }
 
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

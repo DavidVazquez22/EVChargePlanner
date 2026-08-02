@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EVChargePlanner.Domain;
 using EVChargePlanner.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 
 namespace EVChargePlanner.Api.Controllers;
 
@@ -16,6 +17,7 @@ public class CarsController : ControllerBase
         _context = context;
     }
 
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<List<Car>>> GetAll()
     {
@@ -23,6 +25,7 @@ public class CarsController : ControllerBase
         return Ok(cars);
     }
 
+    [Authorize]
     [HttpGet("{id}")]
     public async Task<ActionResult<Car>> GetById(int id)
     {
@@ -31,6 +34,7 @@ public class CarsController : ControllerBase
         return Ok(car);
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<Car>> Create(Car car)
     {
@@ -39,6 +43,7 @@ public class CarsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = car.Id }, car);
     }
 
+    [Authorize]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Car car)
     {
@@ -48,6 +53,7 @@ public class CarsController : ControllerBase
         return NoContent();
     }
 
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using EVChargePlanner.Domain;
 using EVChargePlanner.Domain.Services;
 using EVChargePlanner.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 
 namespace EVChargePlanner.Api.Controllers;
 
@@ -19,6 +20,7 @@ public class ChargingPlanController : ControllerBase
         _plannerService = plannerService;
     }
 
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<List<CarChargingPlan>>> GetPlan([FromQuery] string zone = "NO1")
     {

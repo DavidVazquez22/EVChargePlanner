@@ -14,6 +14,7 @@ public class EVChargePlannerDbContext : DbContext
     public DbSet<Charger> Chargers { get; set; }
     public DbSet<ChargingSession> ChargingSessions { get; set; }
     public DbSet<PriceRecord> PriceRecords { get; set; }
+    public DbSet<User> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

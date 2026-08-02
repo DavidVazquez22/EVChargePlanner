@@ -32,7 +32,7 @@ function App() {
           }
         />
         <Route
-          path="/plan"
+          path="/planRequest"
           element={
             <ProtectedRoute>
               <PlanRequestPage />

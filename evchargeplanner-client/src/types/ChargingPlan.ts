@@ -2,6 +2,8 @@ export interface ChargingWindow {
   startTime: string;
   endTime: string;
   totalPricePerKWh: number;
+  achievedBatteryPercentage: number;
+  isPartialCharge: boolean;
 }
 
 export interface CarChargingPlan {

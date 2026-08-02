@@ -29,6 +29,31 @@ public class ChargingPlanController : ControllerBase
         var carIds = request.Cars.Select(c => c.CarId).ToList();
         var cars = await _context.Cars.Where(c => carIds.Contains(c.Id)).ToListAsync();
 
+        foreach (var carRequest in request.Cars)
+        {
+            var car = cars.FirstOrDefault(c => c.Id == carRequest.CarId);
+            if (car == null)
+            {
+                return BadRequest($"Car with id {carRequest.CarId} not found.");
+            }
+
+            if (carRequest.CurrentBatteryPercentage < 0 || carRequest.CurrentBatteryPercentage > 100)
+            {
+                return BadRequest($"{car.Name}: current battery percentage must be between 0 and 100.");
+            }
+
+            if (carRequest.TargetBatteryPercentage < 0 || carRequest.TargetBatteryPercentage > 100)
+            {
+                return BadRequest($"{car.Name}: target battery percentage must be between 0 and 100.");
+            }
+
+            if (carRequest.CurrentBatteryPercentage >= carRequest.TargetBatteryPercentage)
+            {
+                return BadRequest(
+                    $"{car.Name}: current battery ({carRequest.CurrentBatteryPercentage}%) must be lower than target ({carRequest.TargetBatteryPercentage}%).");
+            }
+        }
+
         var chargeInfos = request.Cars.Select(req => new CarChargeInfo
         {
             Car = cars.First(c => c.Id == req.CarId),

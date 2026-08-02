@@ -107,6 +107,43 @@ public class ChargingPlannerServiceTests
         Assert.NotEqual(baseDate, flexiblePlan.Window!.StartTime);
     }
 
+    [Fact]
+    public void PlanForMultipleCars_WithDeadlineMidHour_EndsExactlyAtDeadline()
+    {
+        var service = new ChargingPlannerService();
+        var baseDate = new DateTime(2026, 1, 1);
+
+        var prices = new List<PriceRecord>
+        {
+            CreatePrice(baseDate, hour: 0, price: 1.0m),
+            CreatePrice(baseDate, hour: 1, price: 1.0m),
+            CreatePrice(baseDate, hour: 2, price: 1.0m),
+        };
+
+        var car = new Car
+        {
+            Id = 1,
+            Name = "Test Car",
+            BatteryCapacityKWh = 40,
+            MaxChargingPowerKW = 10,
+        };
+
+        var deadline = baseDate.AddHours(2).AddMinutes(50);
+
+        var chargeInfos = new List<CarChargeInfo>
+        {
+            new() { Car = car, CurrentBatteryPercentage = 0, TargetBatteryPercentage = 100, DepartureTime = deadline },
+        };
+
+        var result = service.PlanForMultipleCars(chargeInfos, prices, numberOfChargers: 1);
+
+        var plan = result.Single();
+
+        Assert.NotNull(plan.Window);
+        Assert.Equal(deadline, plan.Window!.EndTime);
+        Assert.True(plan.Window.IsPartialCharge);
+    }
+
     private static PriceRecord CreatePrice(DateTime baseDate, int hour, decimal price)
     {
         return new PriceRecord

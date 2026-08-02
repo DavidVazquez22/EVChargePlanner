@@ -63,10 +63,7 @@ const CarsPage = () => {
           <tr>
             <th>Name</th>
             <th>Battery</th>
-            <th>Charging Power</th>
-            <th>Current %</th>
-            <th>Target %</th>
-            <th>Departure</th>
+            <th>Power</th>
             <th>Actions</th>
           </tr>
         </thead>

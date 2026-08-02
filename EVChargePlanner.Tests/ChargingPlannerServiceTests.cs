@@ -79,9 +79,6 @@ public class ChargingPlannerServiceTests
             Name = "Urgent",
             BatteryCapacityKWh = 40,
             MaxChargingPowerKW = 20,
-            CurrentBatteryPercentage = 0,
-            TargetBatteryPercentage = 100,
-            DepartureTime = baseDate.AddHours(2)
         };
 
         var flexibleCar = new Car
@@ -90,15 +87,15 @@ public class ChargingPlannerServiceTests
             Name = "Flexible",
             BatteryCapacityKWh = 40,
             MaxChargingPowerKW = 20,
-            CurrentBatteryPercentage = 0,
-            TargetBatteryPercentage = 100,
-            DepartureTime = null
         };
 
-        var result = service.PlanForMultipleCars(
-            new List<Car> { flexibleCar, urgentCar },
-            prices,
-            numberOfChargers: 1);
+        var chargeInfos = new List<CarChargeInfo>
+        {
+            new() { Car = flexibleCar, CurrentBatteryPercentage = 0, TargetBatteryPercentage = 100, DepartureTime = null },
+            new() { Car = urgentCar, CurrentBatteryPercentage = 0, TargetBatteryPercentage = 100, DepartureTime = baseDate.AddHours(2) },
+        };
+
+        var result = service.PlanForMultipleCars(chargeInfos, prices, numberOfChargers: 1);
 
         var urgentPlan = result.Single(r => r.Car.Id == 1);
         var flexiblePlan = result.Single(r => r.Car.Id == 2);

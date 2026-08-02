@@ -30,10 +30,6 @@ public class EVChargePlannerDbContext : DbContext
             v => v.HasValue ? (v.Value.Kind == DateTimeKind.Utc ? v.Value : DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)) : v,
             v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
 
-        modelBuilder.Entity<Car>()
-            .Property(c => c.DepartureTime)
-            .HasConversion(nullableDateTimeConverter);
-
         modelBuilder.Entity<PriceRecord>()
             .Property(p => p.TimeStart)
             .HasConversion(dateTimeConverter);

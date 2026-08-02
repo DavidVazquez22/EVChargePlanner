@@ -6,6 +6,8 @@ using EVChargePlanner.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 
 namespace EVChargePlanner.Api.Controllers;
+public record CarChargeRequest(int CarId, int CurrentBatteryPercentage, int TargetBatteryPercentage, DateTime? DepartureTime);
+public record ChargingPlanRequest(List<CarChargeRequest> Cars, string Zone = "NO1");
 
 [ApiController]
 [Route("api/charging-plan")]
@@ -21,29 +23,34 @@ public class ChargingPlanController : ControllerBase
     }
 
     [Authorize]
-    [HttpGet]
-    public async Task<ActionResult<List<CarChargingPlan>>> GetPlan([FromQuery] string zone = "NO1")
+    [HttpPost]
+    public async Task<ActionResult<List<CarChargingPlan>>> GetPlan(ChargingPlanRequest request)
     {
-        var cars = await _context.Cars.ToListAsync();
+        var carIds = request.Cars.Select(c => c.CarId).ToList();
+        var cars = await _context.Cars.Where(c => carIds.Contains(c.Id)).ToListAsync();
+
+        var chargeInfos = request.Cars.Select(req => new CarChargeInfo
+        {
+            Car = cars.First(c => c.Id == req.CarId),
+            CurrentBatteryPercentage = req.CurrentBatteryPercentage,
+            TargetBatteryPercentage = req.TargetBatteryPercentage,
+            DepartureTime = req.DepartureTime
+        }).ToList();
 
         var today = DateOnly.FromDateTime(DateTime.Today);
         var prices = await _context.PriceRecords
-            .Where(p => p.PriceZone == zone && p.TimeStart.Date == today.ToDateTime(TimeOnly.MinValue).Date)
+            .Where(p => p.PriceZone == request.Zone && p.TimeStart.Date == today.ToDateTime(TimeOnly.MinValue).Date)
             .ToListAsync();
 
         if (prices.Count == 0)
         {
-            return NotFound("No price data available for today. The background service may not have run yet.");
+            return NotFound("No price data available for today.");
         }
 
         var numberOfChargers = await _context.Chargers.CountAsync();
-        if (numberOfChargers == 0)
-        {
-            numberOfChargers = 1;
-        }
+        if (numberOfChargers == 0) numberOfChargers = 1;
 
-        var plan = _plannerService.PlanForMultipleCars(cars, prices, numberOfChargers);
-
+        var plan = _plannerService.PlanForMultipleCars(chargeInfos, prices, numberOfChargers);
         return Ok(plan);
     }
 }

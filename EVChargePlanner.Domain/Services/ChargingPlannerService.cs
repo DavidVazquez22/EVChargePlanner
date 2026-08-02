@@ -44,29 +44,29 @@ public class ChargingPlannerService
 
 
 public List<CarChargingPlan> PlanForMultipleCars(
-        List<Car> cars,
+        List<CarChargeInfo> chargeInfos,
         List<PriceRecord> prices,
         int numberOfChargers)
     {
         var sortedPrices = prices.OrderBy(p => p.TimeStart).ToList();
         var occupancy = new int[sortedPrices.Count];
 
-        var orderedCars = cars
+        var orderedInfos = chargeInfos
             .OrderBy(c => c.DepartureTime ?? DateTime.MaxValue)
             .ToList();
 
         var results = new List<CarChargingPlan>();
 
-        foreach (var car in orderedCars)
+        foreach (var info in orderedInfos)
         {
-            var energyNeededKWh = car.BatteryCapacityKWh *
-                (car.TargetBatteryPercentage - car.CurrentBatteryPercentage) / 100m;
+            var energyNeededKWh = info.Car.BatteryCapacityKWh *
+                (info.TargetBatteryPercentage - info.CurrentBatteryPercentage) / 100m;
 
-            var effectivePowerKW = car.MaxChargingPowerKW;
+            var effectivePowerKW = info.Car.MaxChargingPowerKW;
             var hoursNeeded = (int)Math.Ceiling(energyNeededKWh / effectivePowerKW);
 
-            var deadlineIndex = car.DepartureTime.HasValue
-                ? sortedPrices.FindIndex(p => p.TimeStart >= car.DepartureTime.Value)
+            var deadlineIndex = info.DepartureTime.HasValue
+                ? sortedPrices.FindIndex(p => p.TimeStart >= info.DepartureTime.Value)
                 : sortedPrices.Count;
 
             if (deadlineIndex == -1)
@@ -79,7 +79,7 @@ public List<CarChargingPlan> PlanForMultipleCars(
 
             if (window == null)
             {
-                results.Add(new CarChargingPlan { Car = car, Window = null });
+                results.Add(new CarChargingPlan { Car = info.Car, Window = null });
                 continue;
             }
 
@@ -92,7 +92,7 @@ public List<CarChargingPlan> PlanForMultipleCars(
 
             results.Add(new CarChargingPlan
             {
-                Car = car,
+                Car = info.Car,
                 Window = new ChargingWindow
                 {
                     StartTime = sortedPrices[startIndex].TimeStart,

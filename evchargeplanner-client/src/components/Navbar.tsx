@@ -11,9 +11,11 @@ const Navbar = () => {
 
   return (
     <nav>
-      <Link to="/dashboard">Dashboard</Link>
-      <Link to="/cars">Cars</Link>
-      <span>EVChagerPlanner</span>
+      <div className="nav-links">
+        <span>EVChargePlanner</span>
+        <Link to="/dashboard">Dashboard</Link>
+        <Link to="/cars">Cars</Link>
+      </div>
       <button onClick={handleLogout}>Logout</button>
     </nav>
   );

@@ -80,8 +80,10 @@ const CarsPage = () => {
               <td>{car.targetBatteryPercentage}%</td>
               <td>{car.departureTime ? new Date(car.departureTime).toLocaleString() : 'Flexible'}</td>
               <td>
-                <button onClick={() => setEditingCar(car)}>Edit</button>
-                <button onClick={() => setCarToDelete(car.id)}>Delete</button>
+                <div className="action-buttons">
+                    <button onClick={() => setEditingCar(car)}>Edit</button>
+                    <button onClick={() => setCarToDelete(car.id)}>Delete</button>
+                </div>
               </td>
             </tr>
           ))}

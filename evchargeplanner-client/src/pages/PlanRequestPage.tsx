@@ -185,6 +185,8 @@ const PlanRequestPage = () => {
               Duration: {formatDuration(plan.window.startTime, plan.window.endTime)}
               <br />
               Estimated cost: {(plan.car.maxChargingPowerKW * plan.window.totalPricePerKWh).toFixed(2)} NOK
+              Charger: {plan.window.chargerName}
+              <br />  
             </p>
           ) : (
             <p>No charging is possible before the deadline.</p>

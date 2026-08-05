@@ -4,58 +4,119 @@ namespace EVChargePlanner.Domain.Services;
 
 public class ChargingPlannerService
 {
-    public ChargingWindow? FindCheapestWindow(List<PriceRecord> prices, int hoursNeeded)
+    private static bool IsSlotAvailable(
+        List<(DateTime Start, DateTime End)> reservedIntervals,
+        DateTime start, DateTime end, int numberOfChargers)
     {
-        if (prices.Count < hoursNeeded || hoursNeeded <= 0)
+        var overlapping = reservedIntervals.Count(r => r.Start < end && r.End > start);
+        return overlapping < numberOfChargers;
+    }
+
+    private static (DateTime Start, DateTime End, decimal TotalPrice)? FindCheapestAvailableSlot(
+        List<PriceRecord> sortedPrices,
+        List<(DateTime Start, DateTime End)> reservedIntervals,
+        int minutesNeeded,
+        DateTime earliestStart,
+        DateTime deadline,
+        int numberOfChargers)
+    {
+        const int stepMinutes = 15;
+        (DateTime Start, DateTime End, decimal TotalPrice)? best = null;
+
+        for (var candidateStart = earliestStart; candidateStart.AddMinutes(minutesNeeded) <= deadline; candidateStart = candidateStart.AddMinutes(stepMinutes))
         {
-            return null;
-        }
+            var candidateEnd = candidateStart.AddMinutes(minutesNeeded);
 
-        var sortedPrices = prices.OrderBy(p => p.TimeStart).ToList();
-
-        decimal currentWindowSum = 0;
-        for (int i = 0; i < hoursNeeded; i++)
-        {
-            currentWindowSum += sortedPrices[i].PricePerKWh;
-        }
-
-        decimal bestSum = currentWindowSum;
-        int bestStartIndex = 0;
-
-        for (int i = hoursNeeded; i < sortedPrices.Count; i++)
-        {
-            currentWindowSum += sortedPrices[i].PricePerKWh;
-            currentWindowSum -= sortedPrices[i - hoursNeeded].PricePerKWh;
-
-            if (currentWindowSum < bestSum)
+            if (!IsSlotAvailable(reservedIntervals, candidateStart, candidateEnd, numberOfChargers))
             {
-                bestSum = currentWindowSum;
-                bestStartIndex = i - hoursNeeded + 1;
+                continue;
+            }
+
+            var totalPrice = SumPriceOverInterval(sortedPrices, candidateStart, candidateEnd);
+
+            if (best == null || totalPrice < best.Value.TotalPrice)
+            {
+                best = (candidateStart, candidateEnd, totalPrice);
             }
         }
 
-        return new ChargingWindow
-        {
-            StartTime = sortedPrices[bestStartIndex].TimeStart,
-            EndTime = sortedPrices[bestStartIndex + hoursNeeded - 1].TimeEnd,
-            TotalPricePerKWh = bestSum
-        };
+        return best;
     }
 
-
-public List<CarChargingPlan> PlanForMultipleCars(
-        List<CarChargeInfo> chargeInfos,
-        List<PriceRecord> prices,
+    private static (DateTime Start, DateTime End, decimal TotalPrice)? FindBestPartialSlot(
+        List<PriceRecord> sortedPrices,
+        List<(DateTime Start, DateTime End)> reservedIntervals,
+        DateTime earliestStart,
+        DateTime deadline,
         int numberOfChargers)
     {
+        const int stepMinutes = 15;
+        (DateTime Start, DateTime End, decimal TotalPrice)? best = null;
+        decimal bestDurationMinutes = 0;
+
+        for (var candidateStart = earliestStart; candidateStart < deadline; candidateStart = candidateStart.AddMinutes(stepMinutes))
+        {
+            var maxEnd = deadline;
+
+            for (var candidateEnd = maxEnd; candidateEnd > candidateStart; candidateEnd = candidateEnd.AddMinutes(-stepMinutes))
+            {
+                if (IsSlotAvailable(reservedIntervals, candidateStart, candidateEnd, numberOfChargers))
+                {
+                    var duration = (decimal)(candidateEnd - candidateStart).TotalMinutes;
+                    var totalPrice = SumPriceOverInterval(sortedPrices, candidateStart, candidateEnd);
+
+                    if (duration > bestDurationMinutes || (duration == bestDurationMinutes && (best == null || totalPrice < best.Value.TotalPrice)))
+                    {
+                        bestDurationMinutes = duration;
+                        best = (candidateStart, candidateEnd, totalPrice);
+                    }
+                    break;
+                }
+            }
+        }
+
+        return best;
+    }
+
+    private static decimal SumPriceOverInterval(List<PriceRecord> sortedPrices, DateTime start, DateTime end)
+    {
+        decimal total = 0;
+        var cursor = start;
+
+        while (cursor < end)
+        {
+            var record = sortedPrices.FirstOrDefault(p => p.TimeStart <= cursor && p.TimeEnd > cursor);
+            if (record == null) break;
+
+            var segmentEnd = record.TimeEnd < end ? record.TimeEnd : end;
+            var fractionOfHour = (decimal)(segmentEnd - cursor).TotalMinutes / 60m;
+            total += record.PricePerKWh * fractionOfHour;
+
+            cursor = segmentEnd;
+        }
+
+        return total;
+    }
+
+    public List<CarChargingPlan> PlanForMultipleCars(
+        List<CarChargeInfo> chargeInfos,
+        List<PriceRecord> prices,
+        List<Charger> chargers)
+    {
         var sortedPrices = prices.OrderBy(p => p.TimeStart).ToList();
-        var occupancy = new int[sortedPrices.Count];
+        var reservedIntervals = new Dictionary<int, List<(DateTime Start, DateTime End)>>();
+
+        foreach (var charger in chargers)
+        {
+            reservedIntervals[charger.Id] = new List<(DateTime Start, DateTime End)>();
+        }
 
         var orderedInfos = chargeInfos
             .OrderBy(c => c.DepartureTime ?? DateTime.MaxValue)
             .ToList();
 
         var results = new List<CarChargingPlan>();
+        var dayEnd = sortedPrices.Last().TimeEnd;
 
         foreach (var info in orderedInfos)
         {
@@ -63,120 +124,139 @@ public List<CarChargingPlan> PlanForMultipleCars(
                 (info.TargetBatteryPercentage - info.CurrentBatteryPercentage) / 100m;
 
             var effectivePowerKW = info.Car.MaxChargingPowerKW;
-            var hoursNeeded = (int)Math.Ceiling(energyNeededKWh / effectivePowerKW);
+            var minutesNeeded = (int)Math.Ceiling((double)(energyNeededKWh / effectivePowerKW) * 60);
 
-            int boundaryIndex;
-            decimal boundaryFraction = 0;
+            var deadline = info.DepartureTime.HasValue && info.DepartureTime.Value < dayEnd
+                ? info.DepartureTime.Value
+                : dayEnd;
 
-            if (info.DepartureTime.HasValue)
+            var earliestStart = sortedPrices.First().TimeStart;
+
+            var assignment = FindCheapestChargerSlot(
+                sortedPrices, reservedIntervals, chargers, minutesNeeded, earliestStart, deadline);
+
+            if (assignment == null)
             {
-                boundaryIndex = sortedPrices.FindIndex(p =>
-                    p.TimeStart <= info.DepartureTime.Value && p.TimeEnd > info.DepartureTime.Value);
+                var fallback = FindBestPartialChargerSlot(sortedPrices, reservedIntervals, chargers, earliestStart, deadline);
 
-                if (boundaryIndex == -1)
+                if (fallback == null)
                 {
-                    boundaryIndex = sortedPrices.FindIndex(p => p.TimeStart >= info.DepartureTime.Value);
-                    if (boundaryIndex == -1) boundaryIndex = sortedPrices.Count;
+                    results.Add(new CarChargingPlan { Car = info.Car, Window = null });
+                    continue;
                 }
-                else
+
+                var (fbCharger, fbStart, fbEnd, fbPrice) = fallback.Value;
+                reservedIntervals[fbCharger.Id].Add((fbStart, fbEnd));
+
+                var fbEnergyKWh = effectivePowerKW * (decimal)((fbEnd - fbStart).TotalMinutes / 60.0);
+                var fbAchievedPct = info.CurrentBatteryPercentage +
+                    (int)Math.Floor(fbEnergyKWh / info.Car.BatteryCapacityKWh * 100);
+
+                results.Add(new CarChargingPlan
                 {
-                    var hourStart = sortedPrices[boundaryIndex].TimeStart;
-                    boundaryFraction = (decimal)(info.DepartureTime.Value - hourStart).TotalHours;
-                }
-            }
-            else
-            {
-                boundaryIndex = sortedPrices.Count;
-            }
-
-            var canUsePartialHour = boundaryFraction > 0;
-            var effectiveAvailableHours = boundaryIndex + (canUsePartialHour ? 1 : 0);
-            var availableHours = Math.Min(hoursNeeded, effectiveAvailableHours);
-
-            if (availableHours <= 0)
-            {
-                results.Add(new CarChargingPlan { Car = info.Car, Window = null });
+                    Car = info.Car,
+                    Window = new ChargingWindow
+                    {
+                        StartTime = fbStart,
+                        EndTime = fbEnd,
+                        TotalPricePerKWh = fbPrice,
+                        AchievedBatteryPercentage = Math.Min(fbAchievedPct, info.TargetBatteryPercentage),
+                        IsPartialCharge = true,
+                        ChargerId = fbCharger.Id,
+                        ChargerName = fbCharger.Name
+                    }
+                });
                 continue;
             }
 
-            var searchLimit = boundaryIndex + (canUsePartialHour ? 1 : 0);
-            var window = FindCheapestAvailableWindow(sortedPrices, occupancy, availableHours, searchLimit, numberOfChargers);
+            var (charger, startTime, endTime, totalPrice) = assignment.Value;
+            reservedIntervals[charger.Id].Add((startTime, endTime));
 
-            if (window == null)
-            {
-                results.Add(new CarChargingPlan { Car = info.Car, Window = null });
-                continue;
-            }
-
-            var (startIndex, totalPrice) = window.Value;
-            var lastSlotIndex = startIndex + availableHours - 1;
-            var usesPartialLastHour = canUsePartialHour && lastSlotIndex == boundaryIndex;
-
-            for (int i = startIndex; i < startIndex + availableHours; i++)
-            {
-                occupancy[i]++;
-            }
-
-            DateTime endTime;
-            decimal achievedEnergyKWh;
-            var adjustedTotalPrice = totalPrice;
-
-            if (usesPartialLastHour)
-            {
-                endTime = info.DepartureTime!.Value;
-                achievedEnergyKWh = (availableHours - 1) * effectivePowerKW + effectivePowerKW * boundaryFraction;
-                adjustedTotalPrice -= sortedPrices[boundaryIndex].PricePerKWh * (1 - boundaryFraction);
-            }
-            else
-            {
-                endTime = sortedPrices[lastSlotIndex].TimeEnd;
-                achievedEnergyKWh = availableHours * effectivePowerKW;
-            }
-
+            var achievedEnergyKWh = effectivePowerKW * (decimal)((endTime - startTime).TotalMinutes / 60.0);
             var achievedPercentage = info.CurrentBatteryPercentage +
                 (int)Math.Floor(achievedEnergyKWh / info.Car.BatteryCapacityKWh * 100);
-            achievedPercentage = Math.Min(achievedPercentage, info.TargetBatteryPercentage);
 
             results.Add(new CarChargingPlan
             {
                 Car = info.Car,
                 Window = new ChargingWindow
                 {
-                    StartTime = sortedPrices[startIndex].TimeStart,
+                    StartTime = startTime,
                     EndTime = endTime,
-                    TotalPricePerKWh = adjustedTotalPrice,
-                    AchievedBatteryPercentage = achievedPercentage,
-                    IsPartialCharge = availableHours < hoursNeeded || usesPartialLastHour
+                    TotalPricePerKWh = totalPrice,
+                    AchievedBatteryPercentage = Math.Min(achievedPercentage, info.TargetBatteryPercentage),
+                    IsPartialCharge = false,
+                    ChargerId = charger.Id,
+                    ChargerName = charger.Name
                 }
             });
         }
 
-            return results;
+        return results;
     }
 
-    private static (int StartIndex, decimal TotalPrice)? FindCheapestAvailableWindow(
-        List<PriceRecord> sortedPrices, int[] occupancy, int hoursNeeded, int deadlineIndex, int numberOfChargers)
+    private static (Charger Charger, DateTime Start, DateTime End, decimal TotalPrice)? FindCheapestChargerSlot(
+        List<PriceRecord> sortedPrices,
+        Dictionary<int, List<(DateTime Start, DateTime End)>> reservedIntervals,
+        List<Charger> chargers,
+        int minutesNeeded,
+        DateTime earliestStart,
+        DateTime deadline)
     {
-        (int StartIndex, decimal TotalPrice)? best = null;
+        const int stepMinutes = 15;
+        (Charger Charger, DateTime Start, DateTime End, decimal TotalPrice)? best = null;
 
-        for (int start = 0; start + hoursNeeded <= deadlineIndex; start++)
+        for (var candidateStart = earliestStart; candidateStart.AddMinutes(minutesNeeded) <= deadline; candidateStart = candidateStart.AddMinutes(stepMinutes))
         {
-            bool hasCapacity = true;
-            decimal sum = 0;
+            var candidateEnd = candidateStart.AddMinutes(minutesNeeded);
 
-            for (int i = start; i < start + hoursNeeded; i++)
+            foreach (var charger in chargers)
             {
-                if (occupancy[i] >= numberOfChargers)
+                var isFree = reservedIntervals[charger.Id].All(r => r.Start >= candidateEnd || r.End <= candidateStart);
+                if (!isFree) continue;
+
+                var totalPrice = SumPriceOverInterval(sortedPrices, candidateStart, candidateEnd);
+
+                if (best == null || totalPrice < best.Value.TotalPrice)
                 {
-                    hasCapacity = false;
+                    best = (charger, candidateStart, candidateEnd, totalPrice);
+                }
+            }
+        }
+
+        return best;
+    }
+
+    private static (Charger Charger, DateTime Start, DateTime End, decimal TotalPrice)? FindBestPartialChargerSlot(
+        List<PriceRecord> sortedPrices,
+        Dictionary<int, List<(DateTime Start, DateTime End)>> reservedIntervals,
+        List<Charger> chargers,
+        DateTime earliestStart,
+        DateTime deadline)
+    {
+        const int stepMinutes = 15;
+        (Charger Charger, DateTime Start, DateTime End, decimal TotalPrice)? best = null;
+        decimal bestDurationMinutes = 0;
+
+        foreach (var charger in chargers)
+        {
+            for (var candidateStart = earliestStart; candidateStart < deadline; candidateStart = candidateStart.AddMinutes(stepMinutes))
+            {
+                for (var candidateEnd = deadline; candidateEnd > candidateStart; candidateEnd = candidateEnd.AddMinutes(-stepMinutes))
+                {
+                    var isFree = reservedIntervals[charger.Id].All(r => r.Start >= candidateEnd || r.End <= candidateStart);
+                    if (!isFree) continue;
+
+                    var duration = (decimal)(candidateEnd - candidateStart).TotalMinutes;
+                    var totalPrice = SumPriceOverInterval(sortedPrices, candidateStart, candidateEnd);
+
+                    if (duration > bestDurationMinutes || (duration == bestDurationMinutes && (best == null || totalPrice < best.Value.TotalPrice)))
+                    {
+                        bestDurationMinutes = duration;
+                        best = (charger, candidateStart, candidateEnd, totalPrice);
+                    }
                     break;
                 }
-                sum += sortedPrices[i].PricePerKWh;
-            }
-
-            if (hasCapacity && (best == null || sum < best.Value.TotalPrice))
-            {
-                best = (start, sum);
             }
         }
 
@@ -191,6 +271,8 @@ public class ChargingWindow
     public decimal TotalPricePerKWh { get; set; }
     public int AchievedBatteryPercentage { get; set; }
     public bool IsPartialCharge { get; set; }
+    public int ChargerId { get; set; }
+    public string ChargerName { get; set; } = string.Empty;
 }
 
 public class CarChargingPlan

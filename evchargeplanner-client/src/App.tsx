@@ -4,6 +4,7 @@ import DashboardPage from './pages/DashboardPage';
 import { isAuthenticated } from './services/authService';
 import CarsPage from './pages/CarsPages';
 import PlanRequestPage from './pages/PlanRequestPage';
+import ChargersPage from './pages/ChargersPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated() ? children : <Navigate to="/login" />;
@@ -36,6 +37,15 @@ function App() {
           element={
             <ProtectedRoute>
               <PlanRequestPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/chargers"
+          element={
+            <ProtectedRoute>
+              <ChargersPage />
             </ProtectedRoute>
           }
         />

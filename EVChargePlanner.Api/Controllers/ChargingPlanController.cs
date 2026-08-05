@@ -6,6 +6,7 @@ using EVChargePlanner.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 
 namespace EVChargePlanner.Api.Controllers;
+
 public record CarChargeRequest(int CarId, int CurrentBatteryPercentage, int TargetBatteryPercentage, DateTime? DepartureTime);
 public record ChargingPlanRequest(List<CarChargeRequest> Cars, string Zone = "NO1");
 
@@ -63,8 +64,12 @@ public class ChargingPlanController : ControllerBase
         }).ToList();
 
         var today = DateOnly.FromDateTime(DateTime.Today);
+        var now = DateTime.UtcNow;
         var prices = await _context.PriceRecords
-            .Where(p => p.PriceZone == request.Zone && p.TimeStart.Date == today.ToDateTime(TimeOnly.MinValue).Date)
+            .Where(p => p.PriceZone == request.Zone
+                     && p.TimeStart.Date == today.ToDateTime(TimeOnly.MinValue).Date
+                     && p.TimeStart >= now.AddHours(-1))
+            .OrderBy(p => p.TimeStart)
             .ToListAsync();
 
         if (prices.Count == 0)
@@ -72,10 +77,13 @@ public class ChargingPlanController : ControllerBase
             return NotFound("No price data available for today.");
         }
 
-        var numberOfChargers = await _context.Chargers.CountAsync();
-        if (numberOfChargers == 0) numberOfChargers = 1;
+        var chargers = await _context.Chargers.ToListAsync();
+        if (chargers.Count == 0)
+        {
+            chargers = new List<Charger> { new Charger { Id = 0, Name = "Default", MaxPowerKW = 999 } };
+        }
 
-        var plan = _plannerService.PlanForMultipleCars(chargeInfos, prices, numberOfChargers);
+        var plan = _plannerService.PlanForMultipleCars(chargeInfos, prices, chargers);
         return Ok(plan);
     }
 }

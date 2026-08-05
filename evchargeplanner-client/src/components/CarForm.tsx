@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import type { Car } from '../types/Car';
+import type { CarModel } from '../types/CarModel';
+import { getCarModels } from '../services/carModelService';
 
 interface CarFormProps {
   onSubmit: (car: Omit<Car, 'id' | 'chargingSessions'>) => Promise<void>;
@@ -15,6 +17,8 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [carModels, setCarModels] = useState<CarModel[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState('');
 
   useEffect(() => {
     if (initialData) {
@@ -27,6 +31,22 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
       setMaxChargingPowerKW('');
     }
   }, [initialData]);
+
+  useEffect(() => {
+    getCarModels().then(setCarModels).catch(() => {});
+  }, []);
+
+  const handleModelSelect = (modelId: string) => {
+    setSelectedModelId(modelId);
+
+    if (modelId === '') return;
+
+    const model = carModels.find((m) => m.id === Number(modelId));
+    if (model) {
+      setBatteryCapacityKWh(String(model.batteryCapacityKWh));
+      setMaxChargingPowerKW(String(model.maxChargingPowerKW));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +68,7 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
         setName('');
         setBatteryCapacityKWh('');
         setMaxChargingPowerKW('');
+        setSelectedModelId('');
       }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data?.errors) {
@@ -66,6 +87,18 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
       <div className="form-message">
         {error && <p style={{ color: 'red', margin: 0 }}>{error}</p>}
         {success && <p style={{ color: 'green', margin: 0 }}>Car saved successfully!</p>}
+      </div>
+
+      <div>
+        <label>Model (optional, autofills specs)</label>
+        <select value={selectedModelId} onChange={(e) => handleModelSelect(e.target.value)}>
+          <option value="">Custom / Other</option>
+          {carModels.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.brand} {m.model}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

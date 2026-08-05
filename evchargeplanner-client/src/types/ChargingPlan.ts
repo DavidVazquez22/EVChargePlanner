@@ -4,6 +4,8 @@ export interface ChargingWindow {
   totalPricePerKWh: number;
   achievedBatteryPercentage: number;
   isPartialCharge: boolean;
+  chargerId: number;
+  chargerName: string;
 }
 
 export interface CarChargingPlan {

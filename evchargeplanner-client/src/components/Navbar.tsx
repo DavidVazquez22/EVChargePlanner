@@ -27,6 +27,7 @@ const Navbar = () => {
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/cars">Cars</Link>
         <Link to="/planRequest">Planner</Link>
+        <Link to="/chargers">Chargers</Link>
       </div>
       <button onClick={handleLogout}>Logout</button>
     </nav>

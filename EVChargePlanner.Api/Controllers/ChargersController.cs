@@ -8,6 +8,7 @@ namespace EVChargePlanner.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ChargersController : ControllerBase
 {
     private readonly EVChargePlannerDbContext _context;
@@ -17,14 +18,12 @@ public class ChargersController : ControllerBase
         _context = context;
     }
 
-    [Authorize]
     [HttpGet]
     public async Task<ActionResult<List<Charger>>> GetAll()
     {
         return Ok(await _context.Chargers.ToListAsync());
     }
 
-    [Authorize]
     [HttpPost]
     public async Task<ActionResult<Charger>> Create(Charger charger)
     {
@@ -33,12 +32,15 @@ public class ChargersController : ControllerBase
         return CreatedAtAction(nameof(GetAll), charger);
     }
 
-    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
         var charger = await _context.Chargers.FindAsync(id);
-        if (charger == null) return NotFound();
+        if (charger == null)
+        {
+            return NotFound();
+        }
+
         _context.Chargers.Remove(charger);
         await _context.SaveChangesAsync();
         return NoContent();

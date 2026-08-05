@@ -22,5 +22,6 @@ export interface CarChargeRequest {
   carId: number;
   currentBatteryPercentage: number;
   targetBatteryPercentage: number;
+  arrivalTime: string | null;
   departureTime: string | null;
 }

@@ -10,6 +10,7 @@ interface CarInputState {
   selected: boolean;
   currentBatteryPercentage: string;
   targetBatteryPercentage: string;
+  arrivalTime: string;
   departureTime: string;
 }
 
@@ -33,6 +34,7 @@ const PlanRequestPage = () => {
             selected: false,
             currentBatteryPercentage: '',
             targetBatteryPercentage: '',
+            arrivalTime: '',
             departureTime: '',
           };
         });
@@ -64,6 +66,7 @@ const PlanRequestPage = () => {
         carId: Number(carId),
         currentBatteryPercentage: Number(input.currentBatteryPercentage),
         targetBatteryPercentage: Number(input.targetBatteryPercentage),
+        arrivalTime: input.arrivalTime ? new Date(input.arrivalTime).toISOString() : null,
         departureTime: input.departureTime ? new Date(input.departureTime).toISOString() : null,
       }));
 
@@ -124,37 +127,50 @@ const PlanRequestPage = () => {
 
             {input.selected && (
               <div className="car-details">
-                <div>
-                  <label>Current</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={input.currentBatteryPercentage}
-                    onChange={(e) => updateInput(car.id, 'currentBatteryPercentage', e.target.value)}
-                  />
+                <div className="car-details-row">
+                    <div>
+                    <label>Current</label>
+                    <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={input.currentBatteryPercentage}
+                        onChange={(e) => updateInput(car.id, 'currentBatteryPercentage', e.target.value)}
+                    />
+                    </div>
+
+                    <div>
+                    <label>Target</label>
+                    <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={input.targetBatteryPercentage}
+                        onChange={(e) => updateInput(car.id, 'targetBatteryPercentage', e.target.value)}
+                    />
+                    </div>
                 </div>
 
-                <div>
-                  <label>Target</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={input.targetBatteryPercentage}
-                    onChange={(e) => updateInput(car.id, 'targetBatteryPercentage', e.target.value)}
-                  />
-                </div>
+                <div className="car-details-row">
+                    <div>
+                    <label>Arrival</label>
+                    <input
+                        type="datetime-local"
+                        value={input.arrivalTime}
+                        onChange={(e) => updateInput(car.id, 'arrivalTime', e.target.value)}
+                    />
+                    </div>
 
-                <div>
-                  <label>Departure</label>
-                  <input
-                    type="datetime-local"
-                    value={input.departureTime}
-                    onChange={(e) => updateInput(car.id, 'departureTime', e.target.value)}
-                  />
+                    <div>
+                    <label>Departure</label>
+                    <input
+                        type="datetime-local"
+                        value={input.departureTime}
+                        onChange={(e) => updateInput(car.id, 'departureTime', e.target.value)}
+                    />
+                    </div>
                 </div>
-              </div>
+                </div>
             )}
           </div>
         );
@@ -185,6 +201,7 @@ const PlanRequestPage = () => {
               Duration: {formatDuration(plan.window.startTime, plan.window.endTime)}
               <br />
               Estimated cost: {(plan.car.maxChargingPowerKW * plan.window.totalPricePerKWh).toFixed(2)} NOK
+              <br />
               Charger: {plan.window.chargerName}
               <br />  
             </p>

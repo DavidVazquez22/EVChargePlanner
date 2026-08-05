@@ -130,7 +130,10 @@ public class ChargingPlannerService
                 ? info.DepartureTime.Value
                 : dayEnd;
 
-            var earliestStart = sortedPrices.First().TimeStart;
+           var globalEarliestStart = sortedPrices.First().TimeStart;
+           var earliestStart = info.ArrivalTime.HasValue && info.ArrivalTime.Value > globalEarliestStart
+                ? info.ArrivalTime.Value
+                : globalEarliestStart;
 
             var assignment = FindCheapestChargerSlot(
                 sortedPrices, reservedIntervals, chargers, minutesNeeded, earliestStart, deadline);

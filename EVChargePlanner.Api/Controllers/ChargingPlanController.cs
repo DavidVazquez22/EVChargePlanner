@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace EVChargePlanner.Api.Controllers;
 
-public record CarChargeRequest(int CarId, int CurrentBatteryPercentage, int TargetBatteryPercentage, DateTime? DepartureTime);
+public record CarChargeRequest(int CarId, int CurrentBatteryPercentage, int TargetBatteryPercentage, DateTime? ArrivalTime, DateTime? DepartureTime);
 public record ChargingPlanRequest(List<CarChargeRequest> Cars, string Zone = "NO1");
 
 [ApiController]
@@ -53,6 +53,12 @@ public class ChargingPlanController : ControllerBase
                 return BadRequest(
                     $"{car.Name}: current battery ({carRequest.CurrentBatteryPercentage}%) must be lower than target ({carRequest.TargetBatteryPercentage}%).");
             }
+
+            if (carRequest.ArrivalTime.HasValue && carRequest.DepartureTime.HasValue
+                && carRequest.ArrivalTime.Value >= carRequest.DepartureTime.Value)
+            {
+                return BadRequest($"{car.Name}: arrival time must be before departure time.");
+            }
         }
 
         var chargeInfos = request.Cars.Select(req => new CarChargeInfo
@@ -60,6 +66,7 @@ public class ChargingPlanController : ControllerBase
             Car = cars.First(c => c.Id == req.CarId),
             CurrentBatteryPercentage = req.CurrentBatteryPercentage,
             TargetBatteryPercentage = req.TargetBatteryPercentage,
+            ArrivalTime = req.ArrivalTime,
             DepartureTime = req.DepartureTime
         }).ToList();
 

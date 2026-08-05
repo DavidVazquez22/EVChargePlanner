@@ -261,3 +261,18 @@ button[type="submit"]:hover {
   align-items: center;
   gap: 0.75rem;
 }
+
+select {
+  padding: 0.5rem;
+  border: 1px solid #263140;
+  border-radius: 4px;
+  font-size: 1rem;
+  background: #0f1419;
+  color: #e2e8f0;
+  width: 100%;
+}
+
+select:focus {
+  outline: none;
+  border-color: #22c55e;
+}

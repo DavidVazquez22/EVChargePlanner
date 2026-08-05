@@ -4,4 +4,5 @@ export interface Car {
   batteryCapacityKWh: number;
   maxChargingPowerKW: number;
   chargingSessions: unknown[];
+  modelLabel: string | null;
 }

@@ -19,16 +19,28 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [carModels, setCarModels] = useState<CarModel[]>([]);
   const [selectedModelId, setSelectedModelId] = useState('');
+  const [modelLabel, setModelLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
       setBatteryCapacityKWh(String(initialData.batteryCapacityKWh));
       setMaxChargingPowerKW(String(initialData.maxChargingPowerKW));
+      setModelLabel(initialData.modelLabel ?? null);
+      if (initialData.modelLabel) {
+        const matchingModel = carModels.find(
+            (m) => `${m.brand} ${m.model}` === initialData.modelLabel
+        );
+        setSelectedModelId(matchingModel ? String(matchingModel.id) : '');
+        } else {
+        setSelectedModelId('');
+        }
     } else {
       setName('');
       setBatteryCapacityKWh('');
       setMaxChargingPowerKW('');
+      setSelectedModelId('');
+      setModelLabel(null);
     }
   }, [initialData]);
 
@@ -39,12 +51,16 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
   const handleModelSelect = (modelId: string) => {
     setSelectedModelId(modelId);
 
-    if (modelId === '') return;
+    if (modelId === '') {
+        setModelLabel(null);
+        return;
+    }
 
     const model = carModels.find((m) => m.id === Number(modelId));
     if (model) {
       setBatteryCapacityKWh(String(model.batteryCapacityKWh));
       setMaxChargingPowerKW(String(model.maxChargingPowerKW));
+      setModelLabel(`${model.brand} ${model.model}`);
     }
   };
 
@@ -59,6 +75,7 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
         name,
         batteryCapacityKWh: Number(batteryCapacityKWh),
         maxChargingPowerKW: Number(maxChargingPowerKW),
+        modelLabel,
       });
 
       setSuccess(true);
@@ -69,6 +86,7 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
         setBatteryCapacityKWh('');
         setMaxChargingPowerKW('');
         setSelectedModelId('');
+        setModelLabel(null);
       }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.data?.errors) {
@@ -90,16 +108,26 @@ const CarForm = ({ onSubmit, initialData, onCancel }: CarFormProps) => {
       </div>
 
       <div>
-        <label>Model (optional, autofills specs)</label>
+        <label>Model</label>
         <select value={selectedModelId} onChange={(e) => handleModelSelect(e.target.value)}>
-          <option value="">Custom / Other</option>
-          {carModels.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.brand} {m.model}
-            </option>
-          ))}
+            <option value="">Custom / Other</option>
+            {Object.entries(
+            carModels.reduce<Record<string, CarModel[]>>((groups, model) => {
+                if (!groups[model.brand]) groups[model.brand] = [];
+                groups[model.brand].push(model);
+                return groups;
+            }, {})
+            ).map(([brand, models]) => (
+            <optgroup key={brand} label={brand}>
+                {models.map((m) => (
+                <option key={m.id} value={m.id}>
+                    {m.model}
+                </option>
+                ))}
+            </optgroup>
+            ))}
         </select>
-      </div>
+        </div>
 
       <div>
         <label>Name</label>

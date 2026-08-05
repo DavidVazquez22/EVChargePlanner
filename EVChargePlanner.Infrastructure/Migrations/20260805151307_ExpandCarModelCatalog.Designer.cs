@@ -3,6 +3,7 @@ using System;
 using EVChargePlanner.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EVChargePlanner.Infrastructure.Migrations
 {
     [DbContext(typeof(EVChargePlannerDbContext))]
-    partial class EVChargePlannerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260805151307_ExpandCarModelCatalog")]
+    partial class ExpandCarModelCatalog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -35,9 +38,6 @@ namespace EVChargePlanner.Infrastructure.Migrations
 
                     b.Property<decimal>("MaxChargingPowerKW")
                         .HasColumnType("numeric");
-
-                    b.Property<string>("ModelLabel")
-                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()

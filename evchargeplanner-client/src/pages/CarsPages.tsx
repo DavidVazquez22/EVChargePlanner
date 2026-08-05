@@ -64,6 +64,7 @@ const CarsPage = () => {
             <th>Name</th>
             <th>Battery</th>
             <th>Power</th>
+            <th>Model</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -73,6 +74,7 @@ const CarsPage = () => {
               <td>{car.name}</td>
               <td>{car.batteryCapacityKWh} kWh</td>
               <td>{car.maxChargingPowerKW} kW</td>
+              <td>{car.modelLabel && <span style={{ color: '#e8ecf0', fontSize: '1rem' }}> {car.modelLabel}</span>} </td>
               <td>
                 <div className="action-buttons">
                     <button onClick={() => setEditingCar(car)}>Edit</button>

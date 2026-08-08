@@ -1,8 +1,13 @@
 # EVChargePlanner
 
-⚡ A full-stack application that calculates the cheapest time windows to charge one or more electric vehicles, based on real day-ahead electricity prices from the Norwegian market — and reserves them so future plans respect what's already scheduled. Built as a portfolio project to practice algorithmic problem-solving, external API integration, and DevOps fundamentals on top of a C#/.NET backend and a React/TypeScript frontend.
+⚡ A full-stack application that calculates the cheapest time windows to charge one or more electric vehicles, based on real day-ahead electricity prices from the Norwegian market — and reserves them so future plans respect what's already scheduled. Built as a portfolio project to practice algorithmic problem-solving, external API integration, and cloud deployment on top of a C#/.NET backend and a React/TypeScript frontend.
 
-> **Status: actively in development.** Core functionality is complete and tested end-to-end. Deployment to Azure is the last remaining piece.
+**🔗 Live demo:** [zealous-flower-034106c0f.7.azurestaticapps.net](https://zealous-flower-034106c0f.7.azurestaticapps.net)
+**🔗 API:** [evchargeplanner-api.lemonmoss-4a4fa75f.northeurope.azurecontainerapps.io](https://evchargeplanner-api.lemonmoss-4a4fa75f.northeurope.azurecontainerapps.io)
+
+> **Status: complete.** Deployed and running on Azure — frontend on Azure Static Web Apps (with continuous deployment via GitHub Actions), backend on Azure Container Apps, database on Azure Database for PostgreSQL.
+>
+> Note: to keep cloud costs near zero between demos, the database is normally kept **paused** and is only started when the app is being actively shown or tested. If the live demo above doesn't load, that's why — reach out and I'll spin it back up.
 
 ## What it does
 
@@ -31,9 +36,10 @@ This is a deliberately more algorithm-heavy project than a typical CRUD app: the
 - React Router, Axios
 - Recharts (price chart)
 
-**Tooling**
-- Docker & Docker Compose (API + PostgreSQL, automatic migrations on startup)
-- GitHub Actions (CI: build + test on every push)
+**Tooling & Cloud**
+- Docker & Docker Compose (local dev: API + PostgreSQL, automatic migrations on startup)
+- GitHub Actions (CI for the backend; CD for the frontend via Static Web Apps)
+- Azure Container Apps, Azure Container Registry, Azure Database for PostgreSQL, Azure Static Web Apps
 
 ## Architecture
 
@@ -53,7 +59,19 @@ The backend follows a layered structure, same approach as in an earlier project 
 - Confirmed plans are persisted as `ChargingSession` records, which become part of the "already reserved" state for every subsequent calculation.
 - All of the above is covered by unit tests that assert on specific, non-obvious outcomes (not just "it returns something").
 
-## Getting started
+## Deployment
+
+Deployed entirely on Azure:
+
+| Piece | Service |
+|---|---|
+| Frontend | Azure Static Web Apps (continuous deployment on every push to `main`) |
+| Backend | Azure Container Apps, image built and pushed to Azure Container Registry |
+| Database | Azure Database for PostgreSQL (Flexible Server) |
+
+The backend image is built for `linux/amd64` explicitly (`docker build --platform linux/amd64 ...`), since Azure's container hosts don't run ARM images — a detail that matters when building from an Apple Silicon Mac. The JWT signing key is kept out of source control (user-secrets locally, an environment variable in the container).
+
+## Getting started (local development)
 
 ### Prerequisites
 - [.NET SDK](https://dotnet.microsoft.com/download)
@@ -102,12 +120,11 @@ npm run dev
 
 All endpoints except `/api/auth/*` require a valid JWT.
 
-## Roadmap / in progress
+## Possible future improvements
 
-- [ ] Deployment to Azure with GitHub Actions CD
-- [ ] Second `IPriceProvider` implementation for Spain (REE/ESIOS)
-- [ ] Move the JWT signing key out of `appsettings.json` into a proper secret store before production use
+- Second `IPriceProvider` implementation for Spain (REE/ESIOS)
+- Move the JWT signing key into Azure Key Vault instead of a plain environment variable
 
 ## Notes
 
-Built as the second project in a portfolio aimed at DAM (Desarrollo de Aplicaciones Multiplataforma) internship applications, following an earlier fleet-management project (FleetManager). Focused on going beyond basic CRUD into real algorithmic logic, external data integration, and containerized deployment.
+Built as the second project in a portfolio aimed at DAM (Desarrollo de Aplicaciones Multiplataforma) internship applications, following an earlier fleet-management project (FleetManager). Focused on going beyond basic CRUD into real algorithmic logic, external data integration, and a full cloud deployment.

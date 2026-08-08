@@ -3,6 +3,7 @@
 ⚡ A full-stack application that calculates the cheapest time windows to charge one or more electric vehicles, based on real day-ahead electricity prices from the Norwegian market — and reserves them so future plans respect what's already scheduled. Built as a portfolio project to practice algorithmic problem-solving, external API integration, and cloud deployment on top of a C#/.NET backend and a React/TypeScript frontend.
 
 **🔗 Live demo:** [zealous-flower-034106c0f.7.azurestaticapps.net](https://zealous-flower-034106c0f.7.azurestaticapps.net)
+**Demo login:** `demo@evchargeplanner.com` / `Demo1234!`
 **🔗 API:** [evchargeplanner-api.lemonmoss-4a4fa75f.northeurope.azurecontainerapps.io](https://evchargeplanner-api.lemonmoss-4a4fa75f.northeurope.azurecontainerapps.io)
 
 > **Status: complete.** Deployed and running on Azure — frontend on Azure Static Web Apps (with continuous deployment via GitHub Actions), backend on Azure Container Apps, database on Azure Database for PostgreSQL.

@@ -25,6 +25,7 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: "Host=db;Database=evchargeplanner;Username=postgres;Password=postgres"
       ASPNETCORE_URLS: "http://+:8080"
+      Jwt__Key: "una-clave-secreta-muy-larga-para-evchargeplanner-1234567890"
 
 volumes:
   postgres_data:

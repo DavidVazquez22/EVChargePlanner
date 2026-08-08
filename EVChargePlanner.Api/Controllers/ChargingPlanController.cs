@@ -142,4 +142,19 @@ public class ChargingPlanController : ControllerBase
             s.EndTime
         }));
     }
+
+    [Authorize]
+    [HttpDelete("sessions/{id}")]
+    public async Task<IActionResult> DeleteSession(int id)
+    {
+        var session = await _context.ChargingSessions.FindAsync(id);
+        if (session == null)
+        {
+            return NotFound();
+        }
+
+        _context.ChargingSessions.Remove(session);
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
 }

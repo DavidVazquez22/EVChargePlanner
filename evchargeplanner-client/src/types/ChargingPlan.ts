@@ -25,3 +25,11 @@ export interface CarChargeRequest {
   arrivalTime: string | null;
   departureTime: string | null;
 }
+
+export interface ConfirmSessionRequest {
+  carId: number;
+  chargerId: number;
+  startTime: string;
+  endTime: string;
+  estimatedCost: number;
+}

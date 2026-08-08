@@ -22,7 +22,11 @@ builder.Services.AddHostedService<PriceUpdateBackgroundService>();
 
 builder.Services.AddScoped<ChargingPlannerService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 

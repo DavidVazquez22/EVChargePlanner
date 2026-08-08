@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Car } from '../types/Car';
 import type { CarChargingPlan } from '../types/ChargingPlan';
 import { getCars } from '../services/carService';
-import { requestChargingPlan } from '../services/chargingPlanService';
+import { confirmChargingPlan, requestChargingPlan } from '../services/chargingPlanService';
 import Navbar from '../components/Navbar';
 import axios from 'axios';
 
@@ -21,6 +21,8 @@ const PlanRequestPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   useEffect(() => {
     const loadCars = async () => {
@@ -100,6 +102,31 @@ const PlanRequestPage = () => {
     if (minutes === 0) return `${hours}h`;
     return `${hours}h ${minutes}m`;
  };
+
+
+    const handleConfirm = async () => {
+    setConfirming(true);
+    setConfirmMessage('');
+
+    const sessions = plans
+        .filter((plan) => plan.window !== null)
+        .map((plan) => ({
+        carId: plan.car.id,
+        chargerId: plan.window!.chargerId,
+        startTime: plan.window!.startTime,
+        endTime: plan.window!.endTime,
+        estimatedCost: plan.car.maxChargingPowerKW * plan.window!.totalPricePerKWh,
+        }));
+
+    try {
+        await confirmChargingPlan(sessions);
+        setConfirmMessage('Plan confirmed and reserved!');
+    } catch {
+        setConfirmMessage('Could not confirm the plan.');
+    } finally {
+        setConfirming(false);
+    }
+    };
 
   if (loading) return <p>Loading...</p>;
 
@@ -185,6 +212,7 @@ const PlanRequestPage = () => {
 
     <div className="plan-results">
       {plans.map((plan) => (
+        
         <div key={plan.car.id}>
           <h3>{plan.car.name}</h3>
           {plan.window ? (
@@ -210,6 +238,15 @@ const PlanRequestPage = () => {
           )}
         </div>
       ))}
+      {plans.length > 0 && (
+        <div className="calculate-button-wrapper">
+            <button className="calculate-button" onClick={handleConfirm} disabled={confirming}>
+            {confirming ? 'Confirming...' : 'Confirm this plan'}
+            </button>
+        </div>
+        )}
+
+        {confirmMessage && <p style={{ textAlign: 'center', color: '#4ade80' }}>{confirmMessage}</p>}
     </div>
   </div>
 )};

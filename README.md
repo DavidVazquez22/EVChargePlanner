@@ -1,20 +1,21 @@
 # EVChargePlanner
 
-⚡ A full-stack application that calculates the cheapest time windows to charge one or more electric vehicles, based on real day-ahead electricity prices from the Norwegian market. Built as a learning project to practice algorithmic problem-solving, external API integration, and DevOps fundamentals on top of a solid C#/.NET backend and a React/TypeScript frontend.
+⚡ A full-stack application that calculates the cheapest time windows to charge one or more electric vehicles, based on real day-ahead electricity prices from the Norwegian market — and reserves them so future plans respect what's already scheduled. Built as a portfolio project to practice algorithmic problem-solving, external API integration, and DevOps fundamentals on top of a C#/.NET backend and a React/TypeScript frontend.
 
-> **Status: actively in development.** Core functionality (pricing, planning algorithm, auth, CRUD, CI) is working end-to-end. Some features described in "Roadmap" below are still being built.
+> **Status: actively in development.** Core functionality is complete and tested end-to-end. Deployment to Azure is the last remaining piece.
 
 ## What it does
 
-- Fetches real day-ahead electricity prices for Norway (via [hvakosterstrommen.no](https://www.hvakosterstrommen.no/strompris-api), a public API built on Nord Pool data), refreshed automatically by a background service.
-- Lets users register their electric vehicles (battery capacity, max charging power).
-- Given one or more vehicles, their current/target battery percentage, and an optional departure deadline, calculates the **cheapest continuous charging window** for each — sharing a limited number of chargers fairly, prioritizing whichever vehicle has the tightest deadline.
-- If there isn't enough time before the deadline for a full charge, it tells the user how far the battery will realistically get instead of just failing silently.
-- Visualizes today's hourly prices on a chart.
+- **Live electricity prices**: fetches real day-ahead prices for Norway (via [hvakosterstrommen.no](https://www.hvakosterstrommen.no/strompris-api), a public API built on Nord Pool data). A background service refreshes them automatically and starts pulling tomorrow's prices as soon as they're published, without any manual step.
+- **Car catalog**: a curated catalog of 30 common EV/PHEV models (grouped by brand) autofills battery capacity and charging power when adding a car — the owner still picks their own name for it (e.g. "David's Car").
+- **Multi-vehicle, multi-charger planning**: given one or more vehicles, their current/target battery percentage, an optional arrival time, and an optional departure deadline, it calculates the **cheapest charging window** for each — sharing a limited number of named chargers, prioritizing whichever vehicle has the tightest deadline, with minute-level precision (no unrealistic hour-boundary conflicts between vehicles).
+- **Honest partial-charge feedback**: if a full charge isn't possible, the app says exactly how far the battery will get — and distinguishes *why*: a tight deadline vs. price data simply not being available that far ahead yet.
+- **Persisted reservations**: confirming a calculated plan reserves those exact time slots per charger. The next plan calculated — for the same or a different vehicle — has to work around what's already reserved, just like a real shared charger would. Reservations can be reviewed and cancelled from the dashboard.
+- **Live dashboard**: an hourly price chart (day/date labels appear automatically once tomorrow's prices are in) plus a table of today's reserved sessions with estimated cost, refreshed automatically every few minutes.
 
 ## Why this project
 
-This is a deliberately more algorithm-heavy project than a typical CRUD app: the core of it is a scheduling problem (multiple vehicles competing for limited charging capacity, under time constraints, optimizing for cost) rather than just reading and writing database records. It was also chosen for its relevance to the Norwegian market, where EV adoption is exceptionally high.
+This is a deliberately more algorithm-heavy project than a typical CRUD app: the core of it is a scheduling problem (multiple vehicles competing for limited charging capacity, under time constraints, optimizing for cost, with real-world minute precision) rather than just reading and writing database records. It was also chosen for its relevance to the Norwegian market, where EV adoption is exceptionally high — and where electricity prices can genuinely swing from a few öre to several kroner per kWh within the same day.
 
 ## Tech stack
 
@@ -23,7 +24,7 @@ This is a deliberately more algorithm-heavy project than a typical CRUD app: the
 - Entity Framework Core + PostgreSQL
 - JWT authentication (BCrypt for password hashing)
 - `BackgroundService` for scheduled price fetching
-- xUnit for algorithm and integration tests
+- xUnit for algorithm and integration tests (9 tests covering the scheduling algorithm, multi-charger assignment, partial-charge reasoning, and reservation persistence)
 
 **Frontend**
 - React + TypeScript, Vite
@@ -36,7 +37,7 @@ This is a deliberately more algorithm-heavy project than a typical CRUD app: the
 
 ## Architecture
 
-The backend follows a layered structure, same approach as in [FleetManager](#), an earlier project in this portfolio:
+The backend follows a layered structure, same approach as in an earlier project in this portfolio (FleetManager):
 
 - `EVChargePlanner.Domain` — entities, the `IPriceProvider` abstraction, and the charging planner algorithm. No external dependencies.
 - `EVChargePlanner.Infrastructure` — EF Core, the Norwegian price provider implementation, the background price-fetching service.
@@ -46,9 +47,11 @@ The backend follows a layered structure, same approach as in [FleetManager](#), 
 
 ## The algorithm, briefly
 
-- Finding the cheapest N-hour window in a day is solved with a **sliding window** approach (O(n)).
-- Planning for *multiple* vehicles sharing a limited number of chargers uses a **greedy strategy**: vehicles are ordered by deadline urgency (soonest first), and each claims the cheapest available slot that doesn't collide with an already-assigned vehicle.
-- Both are covered by unit tests that assert on specific, non-obvious outcomes (not just "it returns something").
+- Finding the cheapest window in a day uses **minute-level precision** (not just hour blocks) — two vehicles can be scheduled back-to-back at, say, 17:23, without either being forced into an unrealistic full-hour slot.
+- Planning for *multiple* vehicles sharing a limited, named set of chargers uses a **greedy strategy**: vehicles are ordered by deadline urgency (soonest first), and each claims the cheapest available slot — on a specific charger — that doesn't collide with an already-assigned vehicle or an existing confirmed reservation.
+- If the ideal duration doesn't fit, the algorithm falls back to the **longest available slot** before the deadline, reports the resulting battery percentage, and flags *why* it fell short (tight deadline vs. price data not extending far enough).
+- Confirmed plans are persisted as `ChargingSession` records, which become part of the "already reserved" state for every subsequent calculation.
+- All of the above is covered by unit tests that assert on specific, non-obvious outcomes (not just "it returns something").
 
 ## Getting started
 
@@ -63,7 +66,7 @@ The backend follows a layered structure, same approach as in [FleetManager](#), 
 docker compose up --build
 ```
 
-API available at `http://localhost:8080`. Migrations are applied automatically on startup.
+API available at `http://localhost:8080`. Migrations, including the seeded car model catalog, are applied automatically on startup.
 
 ### Running locally
 
@@ -88,18 +91,22 @@ npm run dev
 | POST | `/api/auth/login` | Log in and receive a JWT |
 | GET | `/api/cars` | List saved vehicles |
 | POST / PUT / DELETE | `/api/cars/{id}` | Manage vehicles |
-| GET | `/api/prices/today` | Today's hourly electricity prices |
+| GET | `/api/car-models` | Browse the EV/PHEV model catalog |
+| GET / POST / DELETE | `/api/chargers` | Manage named chargers |
+| GET | `/api/prices/upcoming` | Prices from 3 hours ago through the latest available data |
+| GET | `/api/prices/availability` | How far ahead price data currently extends |
 | POST | `/api/charging-plan` | Calculate the optimal charging plan for one or more vehicles |
+| POST | `/api/charging-plan/confirm` | Persist a calculated plan as reserved charging sessions |
+| GET | `/api/charging-plan/today` | List today's reserved sessions |
+| DELETE | `/api/charging-plan/sessions/{id}` | Cancel a reserved session |
 
 All endpoints except `/api/auth/*` require a valid JWT.
 
 ## Roadmap / in progress
 
-- [ ] Catalog of common EV/PHEV models to autofill battery specs when adding a car
-- [ ] Live-updating price chart as new hourly prices become available
-- [ ] Second `IPriceProvider` implementation for Spain (REE/ESIOS)
 - [ ] Deployment to Azure with GitHub Actions CD
-- [ ] Additional test coverage
+- [ ] Second `IPriceProvider` implementation for Spain (REE/ESIOS)
+- [ ] Move the JWT signing key out of `appsettings.json` into a proper secret store before production use
 
 ## Notes
 

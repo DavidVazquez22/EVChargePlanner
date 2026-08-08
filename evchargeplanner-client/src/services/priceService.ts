@@ -7,3 +7,21 @@ export const getTodayPrices = async (zone: string = 'NO1'): Promise<PriceRecord[
   });
   return response.data;
 };
+
+export const getPriceAvailability = async (zone: string = 'NO1'): Promise<Date | null> => {
+  try {
+    const response = await api.get<{ latestAvailable: string }>('/prices/availability', {
+      params: { zone },
+    });
+    return new Date(response.data.latestAvailable);
+  } catch {
+    return null;
+  }
+};
+
+export const getUpcomingPrices = async (zone: string = 'NO1'): Promise<PriceRecord[]> => {
+  const response = await api.get<PriceRecord[]>('/prices/upcoming', {
+    params: { zone },
+  });
+  return response.data;
+};

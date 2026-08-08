@@ -19,6 +19,7 @@ export interface TodaySession {
   chargerName: string;
   startTime: string;
   endTime: string;
+  estimatedCost: number;
 }
 
 export const getTodaySessions = async (): Promise<TodaySession[]> => {

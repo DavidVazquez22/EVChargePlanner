@@ -6,10 +6,16 @@ interface PriceChartProps {
 }
 
 const PriceChart = ({ prices }: PriceChartProps) => {
-  const chartData = prices.map((p) => ({
-    time: new Date(p.timeStart).getHours() + ':00',
-    price: p.pricePerKWh,
-  }));
+  const chartData = prices.map((p) => {
+    const date = new Date(p.timeStart);
+    const isToday = date.toDateString() === new Date().toDateString();
+    const dayLabel = isToday ? '' : date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' }) + ' ';
+
+    return {
+      time: `${dayLabel}${date.getHours()}:00`,
+      price: p.pricePerKWh,
+    };
+  });
 
   return (
     <ResponsiveContainer width="100%" height={300}>

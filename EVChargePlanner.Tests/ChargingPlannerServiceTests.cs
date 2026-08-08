@@ -243,4 +243,97 @@ public class ChargingPlannerServiceTests
         Assert.NotNull(plan.Window);
         Assert.True(plan.Window!.StartTime >= baseDate.AddHours(1));
     }
+
+    [Fact]
+    public void PlanForMultipleCars_WhenLimitedByDataEnd_SetsFlagCorrectly()
+    {
+        var service = new ChargingPlannerService();
+        var baseDate = new DateTime(2026, 1, 1);
+
+        var prices = new List<PriceRecord>
+        {
+            CreatePrice(baseDate, hour: 0, price: 1.0m),
+            CreatePrice(baseDate, hour: 1, price: 1.0m),
+        };
+
+        var charger = new Charger { Id = 1, Name = "Home", MaxPowerKW = 10 };
+        var car = new Car { Id = 1, Name = "Big Battery", BatteryCapacityKWh = 100, MaxChargingPowerKW = 10 };
+
+        var chargeInfos = new List<CarChargeInfo>
+        {
+            new() { Car = car, CurrentBatteryPercentage = 0, TargetBatteryPercentage = 100, DepartureTime = null },
+        };
+
+        var result = service.PlanForMultipleCars(chargeInfos, prices, new List<Charger> { charger });
+        var plan = result.Single();
+
+        Assert.NotNull(plan.Window);
+        Assert.True(plan.Window!.IsPartialCharge);
+        Assert.True(plan.Window.LimitedByDataEnd);
+    }
+
+    [Fact]
+    public void PlanForMultipleCars_WhenLimitedByDeadline_DoesNotSetDataEndFlag()
+    {
+        var service = new ChargingPlannerService();
+        var baseDate = new DateTime(2026, 1, 1);
+
+        var prices = new List<PriceRecord>
+        {
+            CreatePrice(baseDate, hour: 0, price: 1.0m),
+            CreatePrice(baseDate, hour: 1, price: 1.0m),
+            CreatePrice(baseDate, hour: 2, price: 1.0m),
+            CreatePrice(baseDate, hour: 3, price: 1.0m),
+            CreatePrice(baseDate, hour: 4, price: 1.0m),
+        };
+
+        var charger = new Charger { Id = 1, Name = "Home", MaxPowerKW = 10 };
+        var car = new Car { Id = 1, Name = "Big Battery", BatteryCapacityKWh = 100, MaxChargingPowerKW = 10 };
+
+        var chargeInfos = new List<CarChargeInfo>
+        {
+            new() { Car = car, CurrentBatteryPercentage = 0, TargetBatteryPercentage = 100, DepartureTime = baseDate.AddHours(2) },
+        };
+
+        var result = service.PlanForMultipleCars(chargeInfos, prices, new List<Charger> { charger });
+        var plan = result.Single();
+
+        Assert.NotNull(plan.Window);
+        Assert.True(plan.Window!.IsPartialCharge);
+        Assert.False(plan.Window.LimitedByDataEnd);
+    }
+
+    [Fact]
+    public void PlanForMultipleCars_WithArrivalTimeAndExistingReservation_FindsSlotAfterBoth()
+    {
+        var service = new ChargingPlannerService();
+        var baseDate = new DateTime(2026, 1, 1);
+
+        var prices = new List<PriceRecord>
+        {
+            CreatePrice(baseDate, hour: 0, price: 0.1m),
+            CreatePrice(baseDate, hour: 1, price: 0.1m),
+            CreatePrice(baseDate, hour: 2, price: 0.1m),
+            CreatePrice(baseDate, hour: 3, price: 0.1m),
+        };
+
+        var charger = new Charger { Id = 1, Name = "Home", MaxPowerKW = 10 };
+        var car = new Car { Id = 1, Name = "Late Arrival", BatteryCapacityKWh = 10, MaxChargingPowerKW = 10 };
+
+        var existingSessions = new List<ChargingSession>
+        {
+            new() { CarId = 99, ChargerId = 1, StartTime = baseDate.AddHours(1), EndTime = baseDate.AddHours(2) }
+        };
+
+        var chargeInfos = new List<CarChargeInfo>
+        {
+            new() { Car = car, CurrentBatteryPercentage = 0, TargetBatteryPercentage = 100, ArrivalTime = baseDate.AddHours(1).AddMinutes(30), DepartureTime = baseDate.AddHours(4) },
+        };
+
+        var result = service.PlanForMultipleCars(chargeInfos, prices, new List<Charger> { charger }, existingSessions);
+        var plan = result.Single();
+
+        Assert.NotNull(plan.Window);
+        Assert.True(plan.Window!.StartTime >= baseDate.AddHours(2));
+    }
 }

@@ -139,7 +139,8 @@ public class ChargingPlanController : ControllerBase
             CarName = s.Car!.Name,
             ChargerName = s.Charger!.Name,
             s.StartTime,
-            s.EndTime
+            s.EndTime,
+            s.EstimatedCost
         }));
     }
 

@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
 import type { PriceRecord } from '../types/PriceRecord';
-import { getTodayPrices } from '../services/priceService';
+import { getUpcomingPrices } from '../services/priceService';
 import { deleteSession, getTodaySessions, type TodaySession } from '../services/chargingPlanService';
 import Navbar from '../components/Navbar';
 import PriceChart from '../components/PriceChart';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const DashboardPage = () => {
   const [prices, setPrices] = useState<PriceRecord[]>([]);
   const [sessions, setSessions] = useState<TodaySession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const [priceData, sessionData] = await Promise.all([
-          getTodayPrices('NO1'),
+          getUpcomingPrices('NO1'),
           getTodaySessions(),
         ]);
         setPrices(priceData);
@@ -28,19 +30,24 @@ const DashboardPage = () => {
     };
 
     loadData();
+    const interval = setInterval(loadData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
-  
-  const handleDeleteSession = async (id: number) => {
-        await deleteSession(id);
-        const updated = await getTodaySessions();
-        setSessions(updated);
-      };
+
+  const confirmDeleteSession = async () => {
+    if (sessionToDelete === null) return;
+    await deleteSession(sessionToDelete);
+    const updated = await getTodaySessions();
+    setSessions(updated);
+    setSessionToDelete(null);
+  };
+
   if (loading) return <p>Loading...</p>;
 
   return (
     <div>
       <Navbar />
-      <h1>Today's Electricity Prices</h1>
+      <h1>Electricity Prices</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {prices.length > 0 && <PriceChart prices={prices} />}
 
@@ -55,6 +62,7 @@ const DashboardPage = () => {
               <th>Charger</th>
               <th>Start</th>
               <th>End</th>
+              <th>Price</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -67,11 +75,22 @@ const DashboardPage = () => {
                   <td>{s.chargerName}</td>
                   <td>{new Date(s.startTime).toLocaleTimeString()}</td>
                   <td>{new Date(s.endTime).toLocaleTimeString()}</td>
-                  <td><button onClick={() => handleDeleteSession(s.id)}>Delete</button></td>
+                  <td>{s.estimatedCost.toFixed(2)} NOK</td>
+                  <td>
+                    <button onClick={() => setSessionToDelete(s.id)}>Delete</button>
+                  </td>
                 </tr>
               ))}
           </tbody>
         </table>
+      )}
+
+      {sessionToDelete !== null && (
+        <ConfirmDialog
+          message="Are you sure you want to delete this charging session?"
+          onConfirm={confirmDeleteSession}
+          onCancel={() => setSessionToDelete(null)}
+        />
       )}
     </div>
   );

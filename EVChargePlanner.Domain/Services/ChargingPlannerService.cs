@@ -141,6 +141,7 @@ public class ChargingPlannerService
             var deadline = info.DepartureTime.HasValue && info.DepartureTime.Value < dayEnd
                 ? info.DepartureTime.Value
                 : dayEnd;
+            var limitedByDataEnd = deadline == dayEnd;
 
            var globalEarliestStart = sortedPrices.First().TimeStart;
            var earliestStart = info.ArrivalTime.HasValue && info.ArrivalTime.Value > globalEarliestStart
@@ -177,6 +178,7 @@ public class ChargingPlannerService
                         TotalPricePerKWh = fbPrice,
                         AchievedBatteryPercentage = Math.Min(fbAchievedPct, info.TargetBatteryPercentage),
                         IsPartialCharge = true,
+                        LimitedByDataEnd = limitedByDataEnd,
                         ChargerId = fbCharger.Id,
                         ChargerName = fbCharger.Name
                     }
@@ -201,6 +203,7 @@ public class ChargingPlannerService
                     TotalPricePerKWh = totalPrice,
                     AchievedBatteryPercentage = Math.Min(achievedPercentage, info.TargetBatteryPercentage),
                     IsPartialCharge = false,
+                    LimitedByDataEnd = limitedByDataEnd,
                     ChargerId = charger.Id,
                     ChargerName = charger.Name
                 }
@@ -288,6 +291,7 @@ public class ChargingWindow
     public bool IsPartialCharge { get; set; }
     public int ChargerId { get; set; }
     public string ChargerName { get; set; } = string.Empty;
+    public bool LimitedByDataEnd { get; set; }
 }
 
 public class CarChargingPlan

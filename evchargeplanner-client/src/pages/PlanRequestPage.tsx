@@ -5,6 +5,7 @@ import { getCars } from '../services/carService';
 import { confirmChargingPlan, requestChargingPlan } from '../services/chargingPlanService';
 import Navbar from '../components/Navbar';
 import axios from 'axios';
+import { getPriceAvailability } from '../services/priceService';
 
 interface CarInputState {
   selected: boolean;
@@ -23,8 +24,19 @@ const PlanRequestPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
+  const [priceAvailableUntil, setPriceAvailableUntil] = useState<Date | null>(null);
 
   useEffect(() => {
+    getPriceAvailability('NO1').then(setPriceAvailableUntil);
+    const interval = setInterval(() => {
+        getPriceAvailability('NO1').then(setPriceAvailableUntil);
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+    }, []);
+  
+  useEffect(() => {
+    getPriceAvailability('NO1').then(setPriceAvailableUntil);
     const loadCars = async () => {
       try {
         const data = await getCars();
@@ -134,6 +146,11 @@ const PlanRequestPage = () => {
   <div>
     <Navbar />
     <h1>Request Charging Plan</h1>
+        {priceAvailableUntil && (
+            <p style={{ textAlign: 'center', color: '#94a3b8' }}>
+                Price data available until {priceAvailableUntil.toLocaleString()}
+            </p>
+            )}
     {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
 
     <div className="plan-container">
@@ -219,7 +236,9 @@ const PlanRequestPage = () => {
             <p>
               {plan.window.isPartialCharge && (
                 <span style={{ color: 'orange' }}>
-                  ⚠ Not enough time for a full charge — will reach {plan.window.achievedBatteryPercentage}%
+                  ⚠ {plan.window.limitedByDataEnd
+                    ? `Only enough price data available to reach ${plan.window.achievedBatteryPercentage}% before the plan ends`
+                    : `Not enough time for a full charge — will reach ${plan.window.achievedBatteryPercentage}%`}
                   <br />
                 </span>
               )}

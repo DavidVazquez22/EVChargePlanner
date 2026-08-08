@@ -6,6 +6,8 @@ export interface ChargingWindow {
   isPartialCharge: boolean;
   chargerId: number;
   chargerName: string;
+  limitedByDataEnd: boolean;
+
 }
 
 export interface CarChargingPlan {

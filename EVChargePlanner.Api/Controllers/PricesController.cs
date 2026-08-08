@@ -18,16 +18,33 @@ public class PricesController : ControllerBase
         _context = context;
     }
 
-    [HttpGet("today")]
-    public async Task<ActionResult<List<PriceRecord>>> GetToday([FromQuery] string zone = "NO1")
+    [HttpGet("upcoming")]
+    public async Task<ActionResult<List<PriceRecord>>> GetUpcoming([FromQuery] string zone = "NO1")
     {
-        var today = DateOnly.FromDateTime(DateTime.Today).ToDateTime(TimeOnly.MinValue);
+        var cutoff = DateTime.UtcNow.AddHours(-3);
 
         var prices = await _context.PriceRecords
-            .Where(p => p.PriceZone == zone && p.TimeStart.Date == today.Date)
+            .Where(p => p.PriceZone == zone && p.TimeEnd > cutoff)
             .OrderBy(p => p.TimeStart)
             .ToListAsync();
 
         return Ok(prices);
+    }
+
+    [HttpGet("availability")]
+    public async Task<ActionResult> GetAvailability([FromQuery] string zone = "NO1")
+    {
+        var latest = await _context.PriceRecords
+            .Where(p => p.PriceZone == zone)
+            .OrderByDescending(p => p.TimeEnd)
+            .Select(p => p.TimeEnd)
+            .FirstOrDefaultAsync();
+
+        if (latest == default)
+        {
+            return NotFound("No price data available.");
+        }
+
+        return Ok(new { latestAvailable = latest });
     }
 }

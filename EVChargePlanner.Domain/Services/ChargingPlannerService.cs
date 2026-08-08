@@ -101,7 +101,8 @@ public class ChargingPlannerService
     public List<CarChargingPlan> PlanForMultipleCars(
         List<CarChargeInfo> chargeInfos,
         List<PriceRecord> prices,
-        List<Charger> chargers)
+        List<Charger> chargers,
+        List<ChargingSession>? existingSessions = null)
     {
         var sortedPrices = prices.OrderBy(p => p.TimeStart).ToList();
         var reservedIntervals = new Dictionary<int, List<(DateTime Start, DateTime End)>>();
@@ -109,6 +110,17 @@ public class ChargingPlannerService
         foreach (var charger in chargers)
         {
             reservedIntervals[charger.Id] = new List<(DateTime Start, DateTime End)>();
+        }
+
+        if (existingSessions != null)
+        {
+            foreach (var session in existingSessions)
+            {
+                if (reservedIntervals.ContainsKey(session.ChargerId))
+                {
+                    reservedIntervals[session.ChargerId].Add((session.StartTime, session.EndTime));
+                }
+            }
         }
 
         var orderedInfos = chargeInfos

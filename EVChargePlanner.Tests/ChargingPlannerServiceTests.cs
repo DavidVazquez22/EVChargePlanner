@@ -210,4 +210,37 @@ public class ChargingPlannerServiceTests
             PriceZone = "NO1"
         };
     }
+
+    [Fact]
+    public void PlanForMultipleCars_RespectsExistingReservedSessions()
+    {
+        var service = new ChargingPlannerService();
+        var baseDate = new DateTime(2026, 1, 1);
+
+        var prices = new List<PriceRecord>
+        {
+            CreatePrice(baseDate, hour: 0, price: 0.5m),
+            CreatePrice(baseDate, hour: 1, price: 1.0m),
+        };
+
+        var charger = new Charger { Id = 1, Name = "Home", MaxPowerKW = 11 };
+        var car = new Car { Id = 1, Name = "New Car", BatteryCapacityKWh = 10, MaxChargingPowerKW = 10 };
+
+        var existingSessions = new List<ChargingSession>
+        {
+            new() { CarId = 99, ChargerId = 1, StartTime = baseDate, EndTime = baseDate.AddHours(1) }
+        };
+
+        var chargeInfos = new List<CarChargeInfo>
+        {
+            new() { Car = car, CurrentBatteryPercentage = 0, TargetBatteryPercentage = 100, DepartureTime = baseDate.AddHours(2) },
+        };
+
+        var result = service.PlanForMultipleCars(chargeInfos, prices, new List<Charger> { charger }, existingSessions);
+
+        var plan = result.Single();
+
+        Assert.NotNull(plan.Window);
+        Assert.True(plan.Window!.StartTime >= baseDate.AddHours(1));
+    }
 }

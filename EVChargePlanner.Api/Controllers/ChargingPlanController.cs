@@ -90,7 +90,56 @@ public class ChargingPlanController : ControllerBase
             chargers = new List<Charger> { new Charger { Id = 0, Name = "Default", MaxPowerKW = 999 } };
         }
 
-        var plan = _plannerService.PlanForMultipleCars(chargeInfos, prices, chargers);
+        var todayDate = DateTime.Today;
+        var existingSessions = await _context.ChargingSessions
+            .Where(s => s.StartTime.Date == todayDate)
+            .ToListAsync();
+
+        var plan = _plannerService.PlanForMultipleCars(chargeInfos, prices, chargers, existingSessions);
         return Ok(plan);
+    }
+
+    public record ConfirmSessionRequest(int CarId, int ChargerId, DateTime StartTime, DateTime EndTime, decimal EstimatedCost);
+    public record ConfirmPlanRequest(List<ConfirmSessionRequest> Sessions);
+
+    [Authorize]
+    [HttpPost("confirm")]
+    public async Task<ActionResult> ConfirmPlan(ConfirmPlanRequest request)
+    {
+        foreach (var s in request.Sessions)
+        {
+            _context.ChargingSessions.Add(new ChargingSession
+            {
+                CarId = s.CarId,
+                ChargerId = s.ChargerId,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                EstimatedCost = s.EstimatedCost
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok();
+    }
+
+    [Authorize]
+    [HttpGet("today")]
+    public async Task<ActionResult> GetTodaySessions()
+    {
+        var today = DateTime.Today;
+        var sessions = await _context.ChargingSessions
+            .Include(s => s.Car)
+            .Include(s => s.Charger)
+            .Where(s => s.StartTime.Date == today)
+            .ToListAsync();
+
+        return Ok(sessions.Select(s => new
+        {
+            s.Id,
+            CarName = s.Car!.Name,
+            ChargerName = s.Charger!.Name,
+            s.StartTime,
+            s.EndTime
+        }));
     }
 }

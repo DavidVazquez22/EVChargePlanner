@@ -33,32 +33,36 @@ public class PriceUpdateBackgroundService : BackgroundService
     private async Task UpdatePricesAsync()
     {
         using var scope = _serviceProvider.CreateScope();
-
         var priceProvider = scope.ServiceProvider.GetRequiredService<IPriceProvider>();
         var dbContext = scope.ServiceProvider.GetRequiredService<EVChargePlannerDbContext>();
 
-        var targetDate = DateOnly.FromDateTime(DateTime.Today);
         var zone = "NO1";
+        var datesToTry = new[] { DateOnly.FromDateTime(DateTime.Today), DateOnly.FromDateTime(DateTime.Today.AddDays(1)) };
 
-        var prices = await priceProvider.GetPricesAsync(targetDate, zone);
-
-        var deduplicatedPrices = prices
-            .GroupBy(p => p.TimeStart)
-            .Select(g => g.First())
-            .ToList();
-
-        var existingTimestamps = dbContext.PriceRecords
-            .Where(p => p.PriceZone == zone)
-            .Select(p => p.TimeStart)
-            .ToHashSet();
-
-        var newPrices = deduplicatedPrices
-            .Where(p => !existingTimestamps.Contains(p.TimeStart))
-            .ToList();
-        if (newPrices.Count > 0)
+        foreach (var date in datesToTry)
         {
-            dbContext.PriceRecords.AddRange(newPrices);
-            await dbContext.SaveChangesAsync();
+            try
+            {
+                var prices = await priceProvider.GetPricesAsync(date, zone);
+                var deduplicatedPrices = prices.GroupBy(p => p.TimeStart).Select(g => g.First()).ToList();
+
+                var existingTimestamps = dbContext.PriceRecords
+                    .Where(p => p.PriceZone == zone)
+                    .Select(p => p.TimeStart)
+                    .ToHashSet();
+
+                var newPrices = deduplicatedPrices.Where(p => !existingTimestamps.Contains(p.TimeStart)).ToList();
+
+                if (newPrices.Count > 0)
+                {
+                    dbContext.PriceRecords.AddRange(newPrices);
+                    await dbContext.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching prices for {date}: {ex.Message}");
+            }
         }
     }
 }

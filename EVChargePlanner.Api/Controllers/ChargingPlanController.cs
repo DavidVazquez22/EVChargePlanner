@@ -146,7 +146,7 @@ public class ChargingPlanController : ControllerBase
         var sessions = await _context.ChargingSessions
             .Include(s => s.Car)
             .Include(s => s.Charger)
-            .Where(s => s.StartTime.Date == today)
+            .Where(s => s.StartTime.Date == today && s.Car!.UserId == userID)
             .ToListAsync();
 
         return Ok(sessions.Select(s => new

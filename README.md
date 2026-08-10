@@ -1,35 +1,61 @@
 # EVChargePlanner
 
-⚡ A full-stack application that calculates the cheapest time windows to charge one or more electric vehicles, based on real day-ahead electricity prices from the Norwegian market — and reserves them so future plans respect what's already scheduled. Built as a portfolio project to practice algorithmic problem-solving, external API integration, and cloud deployment on top of a C#/.NET backend and a React/TypeScript frontend.
+⚡ A full-stack application that calculates the cheapest time windows to charge one or more electric vehicles, based on real day-ahead electricity prices — and reserves them so future plans respect what's already scheduled. Built as a portfolio project to practice algorithmic problem-solving, external API integration, and cloud deployment on top of a C#/.NET backend and a React/TypeScript frontend.
 
 **🔗 Live demo:** [zealous-flower-034106c0f.7.azurestaticapps.net](https://zealous-flower-034106c0f.7.azurestaticapps.net)
-**Demo login:** `demo@evchargeplanner.com` / `Demo1234!`
 **🔗 API:** [evchargeplanner-api.lemonmoss-4a4fa75f.northeurope.azurecontainerapps.io](https://evchargeplanner-api.lemonmoss-4a4fa75f.northeurope.azurecontainerapps.io)
+
+**Demo accounts:**
+- 👤 User: `usuario@gmail.com` / `Password123`
+- 🛡️ Admin: `admin@gmail.com` / `Password123` (also manages chargers)
 
 > **Status: complete.** Deployed and running on Azure — frontend on Azure Static Web Apps (with continuous deployment via GitHub Actions), backend on Azure Container Apps, database on Azure Database for PostgreSQL.
 >
 > Note: to keep cloud costs near zero between demos, the database is normally kept **paused** and is only started when the app is being actively shown or tested. If the live demo above doesn't load, that's why — reach out and I'll spin it back up.
 
+## Screenshots
+
+**Dashboard — live electricity prices and reserved sessions**
+![Images/Dashboard.png](./Images/dashboard.png)
+
+**Planner — calculating the cheapest charging plan for multiple vehicles**
+![Images/Planner.png](./images/planner.png)
+
+**Cars — adding a vehicle from the 30-model catalog, grouped by brand**
+![Images/Cars.png](./images/cars.png)
+
+**Role-based access — the "Chargers" section only appears for Admin accounts**
+
+| User account | Admin account |
+|---|---|
+| ![Images/User.png](./images/user.png) | ![Images/Admin.png](./images/admin.png) |
+
+**Full flow — selecting a car, calculating a plan, and confirming a reservation**
+![Images/GIF.gif](./images/GIF.gif)
+
 ## What it does
 
-- **Live electricity prices**: fetches real day-ahead prices for Norway (via [hvakosterstrommen.no](https://www.hvakosterstrommen.no/strompris-api), a public API built on Nord Pool data). A background service refreshes them automatically and starts pulling tomorrow's prices as soon as they're published, without any manual step.
+- **Live electricity prices**: fetches real day-ahead prices (via [hvakosterstrommen.no](https://www.hvakosterstrommen.no/strompris-api) for Norway, built on Nord Pool data). A background service refreshes them automatically and starts pulling tomorrow's prices as soon as they're published, without any manual step.
+- **Multi-country pricing**: a country selector (Norway / Spain) switches both the price source and the displayed currency (NOK / EUR) live. Vehicles and confirmed plans are shared across countries — only the price source and currency change.
+- **Role-based access**: regular users manage their own vehicles and charging plans; only Admin accounts can create and manage shared chargers.
 - **Car catalog**: a curated catalog of 30 common EV/PHEV models (grouped by brand) autofills battery capacity and charging power when adding a car — the owner still picks their own name for it (e.g. "David's Car").
 - **Multi-vehicle, multi-charger planning**: given one or more vehicles, their current/target battery percentage, an optional arrival time, and an optional departure deadline, it calculates the **cheapest charging window** for each — sharing a limited number of named chargers, prioritizing whichever vehicle has the tightest deadline, with minute-level precision (no unrealistic hour-boundary conflicts between vehicles).
 - **Honest partial-charge feedback**: if a full charge isn't possible, the app says exactly how far the battery will get — and distinguishes *why*: a tight deadline vs. price data simply not being available that far ahead yet.
 - **Persisted reservations**: confirming a calculated plan reserves those exact time slots per charger. The next plan calculated — for the same or a different vehicle — has to work around what's already reserved, just like a real shared charger would. Reservations can be reviewed and cancelled from the dashboard.
-- **Live dashboard**: an hourly price chart (day/date labels appear automatically once tomorrow's prices are in) plus a table of today's reserved sessions with estimated cost, refreshed automatically every few minutes.
+- **Per-user data isolation**: each user only sees and manages their own vehicles and charging sessions.
+- **Public registration**: anyone can create their own account (with server-side email format validation), or use the demo accounts above.
 
 ## Why this project
 
-This is a deliberately more algorithm-heavy project than a typical CRUD app: the core of it is a scheduling problem (multiple vehicles competing for limited charging capacity, under time constraints, optimizing for cost, with real-world minute precision) rather than just reading and writing database records. It was also chosen for its relevance to the Norwegian market, where EV adoption is exceptionally high — and where electricity prices can genuinely swing from a few öre to several kroner per kWh within the same day.
+This is a deliberately more algorithm-heavy project than a typical CRUD app: the core of it is a scheduling problem (multiple vehicles competing for limited charging capacity, under time constraints, optimizing for cost, with real-world minute precision) rather than just reading and writing database records. It was also chosen for its relevance to markets with high EV adoption and genuinely volatile electricity prices.
 
 ## Tech stack
 
 **Backend**
 - C# / .NET 10, ASP.NET Core Web API
 - Entity Framework Core + PostgreSQL
-- JWT authentication (BCrypt for password hashing)
-- `BackgroundService` for scheduled price fetching
+- JWT authentication with role-based authorization (BCrypt for password hashing)
+- `BackgroundService` for scheduled price fetching across multiple countries
 - xUnit for algorithm and integration tests (9 tests covering the scheduling algorithm, multi-charger assignment, partial-charge reasoning, and reservation persistence)
 
 **Frontend**
@@ -47,10 +73,10 @@ This is a deliberately more algorithm-heavy project than a typical CRUD app: the
 The backend follows a layered structure, same approach as in an earlier project in this portfolio (FleetManager):
 
 - `EVChargePlanner.Domain` — entities, the `IPriceProvider` abstraction, and the charging planner algorithm. No external dependencies.
-- `EVChargePlanner.Infrastructure` — EF Core, the Norwegian price provider implementation, the background price-fetching service.
+- `EVChargePlanner.Infrastructure` — EF Core, the price provider implementations (Norway, Spain), a `PriceProviderFactory` that picks the right one per request, and the background price-fetching service.
 - `EVChargePlanner.Api` — controllers, authentication, HTTP layer.
 
-`IPriceProvider` is designed so a second country's price source (Spain is planned) can be added as a new implementation without touching the rest of the app.
+`IPriceProvider` is designed so a new country's price source can be added as a new implementation without touching the rest of the app — Spain (REE/ESIOS) was added this way after Norway.
 
 ## The algorithm, briefly
 
@@ -70,7 +96,7 @@ Deployed entirely on Azure:
 | Backend | Azure Container Apps, image built and pushed to Azure Container Registry |
 | Database | Azure Database for PostgreSQL (Flexible Server) |
 
-The backend image is built for `linux/amd64` explicitly (`docker build --platform linux/amd64 ...`), since Azure's container hosts don't run ARM images — a detail that matters when building from an Apple Silicon Mac. The JWT signing key is kept out of source control (user-secrets locally, an environment variable in the container).
+The backend image is built for `linux/amd64` explicitly (`docker build --platform linux/amd64 ...`), since Azure's container hosts don't run ARM images — a detail that matters when building from an Apple Silicon Mac. Secrets (JWT signing key, ESIOS API token) are kept out of source control: user-secrets locally, environment variables in the container.
 
 ## Getting started (local development)
 
@@ -108,12 +134,12 @@ npm run dev
 |---|---|---|
 | POST | `/api/auth/register` | Register a new user |
 | POST | `/api/auth/login` | Log in and receive a JWT |
-| GET | `/api/cars` | List saved vehicles |
-| POST / PUT / DELETE | `/api/cars/{id}` | Manage vehicles |
+| GET | `/api/cars` | List the current user's vehicles |
+| POST / PUT / DELETE | `/api/cars/{id}` | Manage vehicles (owner only) |
 | GET | `/api/car-models` | Browse the EV/PHEV model catalog |
-| GET / POST / DELETE | `/api/chargers` | Manage named chargers |
-| GET | `/api/prices/upcoming` | Prices from 3 hours ago through the latest available data |
-| GET | `/api/prices/availability` | How far ahead price data currently extends |
+| GET / POST / DELETE | `/api/chargers` | Manage named chargers (Admin only) |
+| GET | `/api/prices/upcoming` | Prices from 3 hours ago through the latest available data, for a given country |
+| GET | `/api/prices/availability` | How far ahead price data currently extends, for a given country |
 | POST | `/api/charging-plan` | Calculate the optimal charging plan for one or more vehicles |
 | POST | `/api/charging-plan/confirm` | Persist a calculated plan as reserved charging sessions |
 | GET | `/api/charging-plan/today` | List today's reserved sessions |
@@ -123,8 +149,8 @@ All endpoints except `/api/auth/*` require a valid JWT.
 
 ## Possible future improvements
 
-- Second `IPriceProvider` implementation for Spain (REE/ESIOS)
-- Move the JWT signing key into Azure Key Vault instead of a plain environment variable
+- Move the JWT signing key and ESIOS token into Azure Key Vault instead of plain environment variables
+- Support additional price zones within each country
 
 ## Notes
 

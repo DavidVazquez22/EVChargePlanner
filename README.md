@@ -16,22 +16,22 @@
 ## Screenshots
 
 **Dashboard — live electricity prices and reserved sessions**
-![Images/Dashboard.png](./Images/dashboard.png)
+![Images/Dashboard.png](./Images/Dashboard.png)
 
 **Planner — calculating the cheapest charging plan for multiple vehicles**
-![Images/Planner.png](./images/planner.png)
+![Images/Planner.png](./Images/Planner.png)
 
 **Cars — adding a vehicle from the 30-model catalog, grouped by brand**
-![Images/Cars.png](./images/cars.png)
+![Images/Cars.png](./Images/Cars.png)
 
 **Role-based access — the "Chargers" section only appears for Admin accounts**
 
 | User account | Admin account |
 |---|---|
-| ![Images/User.png](./images/user.png) | ![Images/Admin.png](./images/admin.png) |
+| ![Images/User.png](./Images/User.png) | ![Images/Admin.png](./Images/Admin.png) |
 
 **Full flow — selecting a car, calculating a plan, and confirming a reservation**
-![Images/GIF.gif](./images/GIF.gif)
+![Images/GIF.gif](./Images/GIF.gif)
 
 ## What it does
 

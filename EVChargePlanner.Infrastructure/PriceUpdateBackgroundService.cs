@@ -29,39 +29,43 @@ public class PriceUpdateBackgroundService : BackgroundService
             await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
         }
     }
-
     private async Task UpdatePricesAsync()
     {
         using var scope = _serviceProvider.CreateScope();
-        var priceProvider = scope.ServiceProvider.GetRequiredService<IPriceProvider>();
+        var providerFactory = scope.ServiceProvider.GetRequiredService<PriceProviderFactory>();
         var dbContext = scope.ServiceProvider.GetRequiredService<EVChargePlannerDbContext>();
 
-        var zone = "NO1";
+        var zones = new[] { "NO1", "ES" };
         var datesToTry = new[] { DateOnly.FromDateTime(DateTime.Today), DateOnly.FromDateTime(DateTime.Today.AddDays(1)) };
 
-        foreach (var date in datesToTry)
+        foreach (var zone in zones)
         {
-            try
+            var provider = providerFactory.GetProvider(zone);
+
+            foreach (var date in datesToTry)
             {
-                var prices = await priceProvider.GetPricesAsync(date, zone);
-                var deduplicatedPrices = prices.GroupBy(p => p.TimeStart).Select(g => g.First()).ToList();
-
-                var existingTimestamps = dbContext.PriceRecords
-                    .Where(p => p.PriceZone == zone)
-                    .Select(p => p.TimeStart)
-                    .ToHashSet();
-
-                var newPrices = deduplicatedPrices.Where(p => !existingTimestamps.Contains(p.TimeStart)).ToList();
-
-                if (newPrices.Count > 0)
+                try
                 {
-                    dbContext.PriceRecords.AddRange(newPrices);
-                    await dbContext.SaveChangesAsync();
+                    var prices = await provider.GetPricesAsync(date, zone);
+                    var deduplicatedPrices = prices.GroupBy(p => p.TimeStart).Select(g => g.First()).ToList();
+
+                    var existingTimestamps = dbContext.PriceRecords
+                        .Where(p => p.PriceZone == zone)
+                        .Select(p => p.TimeStart)
+                        .ToHashSet();
+
+                    var newPrices = deduplicatedPrices.Where(p => !existingTimestamps.Contains(p.TimeStart)).ToList();
+
+                    if (newPrices.Count > 0)
+                    {
+                        dbContext.PriceRecords.AddRange(newPrices);
+                        await dbContext.SaveChangesAsync();
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error fetching prices for {date}: {ex.Message}");
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error fetching prices for {zone} on {date}: {ex.Message}");
+                }
             }
         }
     }

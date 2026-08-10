@@ -1,9 +1,10 @@
 import api from './api';
 import type { CarChargingPlan, CarChargeRequest, ConfirmSessionRequest } from '../types/ChargingPlan';
+import { getSelectedZone } from './zoneService';
 
 export const requestChargingPlan = async (
   cars: CarChargeRequest[],
-  zone: string = 'NO1'
+  zone: string = getSelectedZone()
 ): Promise<CarChargingPlan[]> => {
   const response = await api.post<CarChargingPlan[]>('/charging-plan', { cars, zone });
   return response.data;

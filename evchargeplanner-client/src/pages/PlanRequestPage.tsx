@@ -6,6 +6,7 @@ import { confirmChargingPlan, requestChargingPlan } from '../services/chargingPl
 import Navbar from '../components/Navbar';
 import axios from 'axios';
 import { getPriceAvailability } from '../services/priceService';
+import { getSelectedZone } from '../services/zoneService';
 
 interface CarInputState {
   selected: boolean;
@@ -26,17 +27,19 @@ const PlanRequestPage = () => {
   const [confirmMessage, setConfirmMessage] = useState('');
   const [priceAvailableUntil, setPriceAvailableUntil] = useState<Date | null>(null);
 
+  const zone = getSelectedZone();
+  const currency = zone.startsWith('ES') ? 'EUR' : 'NOK';
+
   useEffect(() => {
-    getPriceAvailability('NO1').then(setPriceAvailableUntil);
+    getPriceAvailability(zone).then(setPriceAvailableUntil);
     const interval = setInterval(() => {
-        getPriceAvailability('NO1').then(setPriceAvailableUntil);
+      getPriceAvailability(zone).then(setPriceAvailableUntil);
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-    }, []);
-  
+  }, [zone]);
+
   useEffect(() => {
-    getPriceAvailability('NO1').then(setPriceAvailableUntil);
     const loadCars = async () => {
       try {
         const data = await getCars();
@@ -91,16 +94,16 @@ const PlanRequestPage = () => {
     }
 
     try {
-    const result = await requestChargingPlan(selectedCars, 'NO1');
-    setPlans(result);
+      const result = await requestChargingPlan(selectedCars, zone);
+      setPlans(result);
     } catch (err) {
-    if (axios.isAxiosError(err) && typeof err.response?.data === 'string') {
+      if (axios.isAxiosError(err) && typeof err.response?.data === 'string') {
         setError(err.response.data);
-    } else {
+      } else {
         setError('Could not calculate the charging plan. Price data may not be available yet.');
-    }
+      }
     } finally {
-    setSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -113,161 +116,160 @@ const PlanRequestPage = () => {
     if (hours === 0) return `${minutes}m`;
     if (minutes === 0) return `${hours}h`;
     return `${hours}h ${minutes}m`;
- };
+  };
 
-
-    const handleConfirm = async () => {
+  const handleConfirm = async () => {
     setConfirming(true);
     setConfirmMessage('');
 
     const sessions = plans
-        .filter((plan) => plan.window !== null)
-        .map((plan) => ({
+      .filter((plan) => plan.window !== null)
+      .map((plan) => ({
         carId: plan.car.id,
         chargerId: plan.window!.chargerId,
         startTime: plan.window!.startTime,
         endTime: plan.window!.endTime,
         estimatedCost: plan.car.maxChargingPowerKW * plan.window!.totalPricePerKWh,
-        }));
+      }));
 
     try {
-        await confirmChargingPlan(sessions);
-        setConfirmMessage('Plan confirmed and reserved!');
+      await confirmChargingPlan(sessions);
+      setConfirmMessage('Plan confirmed and reserved!');
     } catch {
-        setConfirmMessage('Could not confirm the plan.');
+      setConfirmMessage('Could not confirm the plan.');
     } finally {
-        setConfirming(false);
+      setConfirming(false);
     }
-    };
+  };
 
   if (loading) return <p>Loading...</p>;
 
   return (
-  <div>
-    <Navbar />
-    <h1>Request Charging Plan</h1>
-        {priceAvailableUntil && (
-            <p style={{ textAlign: 'center', color: '#94a3b8' }}>
-                Price data available until {priceAvailableUntil.toLocaleString()}
-            </p>
-            )}
-    {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
+    <div>
+      <Navbar />
+      <h1>Request Charging Plan</h1>
+      {priceAvailableUntil && (
+        <p style={{ textAlign: 'center', color: '#94a3b8' }}>
+          Price data available until {priceAvailableUntil.toLocaleString()}
+        </p>
+      )}
+      {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
 
-    <div className="plan-container">
-      {cars.map((car) => {
-        const input = inputs[car.id];
-        if (!input) return null;
+      <div className="plan-container">
+        {cars.map((car) => {
+          const input = inputs[car.id];
+          if (!input) return null;
 
-        return (
-          <div key={car.id} className="car-input-row">
-            <label>
-              <input
-                type="checkbox"
-                checked={input.selected}
-                onChange={(e) => updateInput(car.id, 'selected', e.target.checked)}
-              />
-              {car.name}
-            </label>
+          return (
+            <div key={car.id} className="car-input-row">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={input.selected}
+                  onChange={(e) => updateInput(car.id, 'selected', e.target.checked)}
+                />
+                {car.name}
+              </label>
 
-            {input.selected && (
-              <div className="car-details">
-                <div className="car-details-row">
+              {input.selected && (
+                <div className="car-details">
+                  <div className="car-details-row">
                     <div>
-                    <label>Current</label>
-                    <input
+                      <label>Current</label>
+                      <input
                         type="number"
                         min="0"
                         max="100"
                         value={input.currentBatteryPercentage}
                         onChange={(e) => updateInput(car.id, 'currentBatteryPercentage', e.target.value)}
-                    />
+                      />
                     </div>
 
                     <div>
-                    <label>Target</label>
-                    <input
+                      <label>Target</label>
+                      <input
                         type="number"
                         min="0"
                         max="100"
                         value={input.targetBatteryPercentage}
                         onChange={(e) => updateInput(car.id, 'targetBatteryPercentage', e.target.value)}
-                    />
+                      />
                     </div>
-                </div>
+                  </div>
 
-                <div className="car-details-row">
+                  <div className="car-details-row">
                     <div>
-                    <label>Arrival</label>
-                    <input
+                      <label>Arrival</label>
+                      <input
                         type="datetime-local"
                         value={input.arrivalTime}
                         onChange={(e) => updateInput(car.id, 'arrivalTime', e.target.value)}
-                    />
+                      />
                     </div>
 
                     <div>
-                    <label>Departure</label>
-                    <input
+                      <label>Departure</label>
+                      <input
                         type="datetime-local"
                         value={input.departureTime}
                         onChange={(e) => updateInput(car.id, 'departureTime', e.target.value)}
-                    />
+                      />
                     </div>
+                  </div>
                 </div>
-                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <div className="calculate-button-wrapper">
+          <button className="calculate-button" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Calculating...' : 'Calculate Plan'}
+          </button>
+        </div>
+      </div>
+
+      <div className="plan-results">
+        {plans.map((plan) => (
+          <div key={plan.car.id}>
+            <h3>{plan.car.name}</h3>
+            {plan.window ? (
+              <p>
+                {plan.window.isPartialCharge && (
+                  <span style={{ color: 'orange' }}>
+                    ⚠ {plan.window.limitedByDataEnd
+                      ? `Only enough price data available to reach ${plan.window.achievedBatteryPercentage}% before the plan ends`
+                      : `Not enough time for a full charge — will reach ${plan.window.achievedBatteryPercentage}%`}
+                    <br />
+                  </span>
+                )}
+                Best window: {new Date(plan.window.startTime).toLocaleTimeString()} –{' '}
+                {new Date(plan.window.endTime).toLocaleTimeString()}
+                <br />
+                Duration: {formatDuration(plan.window.startTime, plan.window.endTime)}
+                <br />
+                Estimated cost: {(plan.car.maxChargingPowerKW * plan.window.totalPricePerKWh).toFixed(2)} {currency}
+                <br />
+                Charger: {plan.window.chargerName}
+                <br />
+              </p>
+            ) : (
+              <p>No charging is possible before the deadline.</p>
             )}
           </div>
-        );
-      })}
-
-      <div className="calculate-button-wrapper">
-        <button className="calculate-button" onClick={handleSubmit} disabled={submitting}>
-          {submitting ? 'Calculating...' : 'Calculate Plan'}
-        </button>
-      </div>
-    </div>
-
-    <div className="plan-results">
-      {plans.map((plan) => (
-        
-        <div key={plan.car.id}>
-          <h3>{plan.car.name}</h3>
-          {plan.window ? (
-            <p>
-              {plan.window.isPartialCharge && (
-                <span style={{ color: 'orange' }}>
-                  ⚠ {plan.window.limitedByDataEnd
-                    ? `Only enough price data available to reach ${plan.window.achievedBatteryPercentage}% before the plan ends`
-                    : `Not enough time for a full charge — will reach ${plan.window.achievedBatteryPercentage}%`}
-                  <br />
-                </span>
-              )}
-              Best window: {new Date(plan.window.startTime).toLocaleTimeString()} –{' '}
-              {new Date(plan.window.endTime).toLocaleTimeString()}
-              <br />
-              Duration: {formatDuration(plan.window.startTime, plan.window.endTime)}
-              <br />
-              Estimated cost: {(plan.car.maxChargingPowerKW * plan.window.totalPricePerKWh).toFixed(2)} NOK
-              <br />
-              Charger: {plan.window.chargerName}
-              <br />  
-            </p>
-          ) : (
-            <p>No charging is possible before the deadline.</p>
-          )}
-        </div>
-      ))}
-      {plans.length > 0 && (
-        <div className="calculate-button-wrapper">
+        ))}
+        {plans.length > 0 && (
+          <div className="calculate-button-wrapper">
             <button className="calculate-button" onClick={handleConfirm} disabled={confirming}>
-            {confirming ? 'Confirming...' : 'Confirm this plan'}
+              {confirming ? 'Confirming...' : 'Confirm this plan'}
             </button>
-        </div>
+          </div>
         )}
 
         {confirmMessage && <p style={{ textAlign: 'center', color: '#4ade80' }}>{confirmMessage}</p>}
+      </div>
     </div>
-  </div>
-)};
+  );
+};
 
 export default PlanRequestPage;

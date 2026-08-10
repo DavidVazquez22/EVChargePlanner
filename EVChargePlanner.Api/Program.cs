@@ -13,7 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Services.AddHttpClient<IPriceProvider, NorwayPriceProvider>();
+builder.Services.AddHttpClient<NorwayPriceProvider>();
+builder.Services.AddHttpClient<SpainPriceProvider>();
+builder.Services.AddScoped<PriceProviderFactory>();
 
 builder.Services.AddDbContext<EVChargePlannerDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -98,12 +100,6 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
-
-app.MapGet("/test-prices", async (IPriceProvider priceProvider) =>
-{
-    var prices = await priceProvider.GetPricesAsync(DateOnly.FromDateTime(DateTime.Today), "NO1");
-    return Results.Ok(prices);
-});
 
 app.Run();
 

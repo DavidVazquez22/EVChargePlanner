@@ -8,7 +8,7 @@ namespace EVChargePlanner.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = "Admin")]
 public class ChargersController : ControllerBase
 {
     private readonly EVChargePlannerDbContext _context;

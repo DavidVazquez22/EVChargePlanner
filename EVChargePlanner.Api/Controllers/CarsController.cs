@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using EVChargePlanner.Domain;
 using EVChargePlanner.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace EVChargePlanner.Api.Controllers;
 
@@ -17,11 +18,17 @@ public class CarsController : ControllerBase
         _context = context;
     }
 
+    private int GetCurrentUserId()
+    {
+        return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+    }
+
     [Authorize]
     [HttpGet]
     public async Task<ActionResult<List<Car>>> GetAll()
     {
-        var cars = await _context.Cars.ToListAsync();
+        var userId = GetCurrentUserId();
+        var cars = await _context.Cars.Where(c => c.UserId == userId).ToListAsync();
         return Ok(cars);
     }
 
@@ -29,7 +36,8 @@ public class CarsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<Car>> GetById(int id)
     {
-        var car = await _context.Cars.FindAsync(id);
+        var userId = GetCurrentUserId();
+        var car = await _context.Cars.Where(c => c.UserId == userId).ToListAsync();
         if (car == null) return NotFound();
         return Ok(car);
     }
@@ -38,6 +46,7 @@ public class CarsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Car>> Create(Car car)
     {
+        car.UserId = GetCurrentUserId();
         _context.Cars.Add(car);
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetById), new { id = car.Id }, car);
@@ -47,8 +56,15 @@ public class CarsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Car car)
     {
-        if (id != car.Id) return BadRequest();
-        _context.Entry(car).State = EntityState.Modified;
+        var userId = GetCurrentUserId();
+        var existing = await _context.Cars.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+        if (existing == null) return NotFound();
+
+        existing.Name = car.Name;
+        existing.BatteryCapacityKWh = car.BatteryCapacityKWh;
+        existing.MaxChargingPowerKW = car.MaxChargingPowerKW;
+        existing.ModelLabel = car.ModelLabel;
+
         await _context.SaveChangesAsync();
         return NoContent();
     }
@@ -57,7 +73,8 @@ public class CarsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var car = await _context.Cars.FindAsync(id);
+        var userId = GetCurrentUserId();
+        var car = await _context.Cars.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
         if (car == null) return NotFound();
         _context.Cars.Remove(car);
         await _context.SaveChangesAsync();

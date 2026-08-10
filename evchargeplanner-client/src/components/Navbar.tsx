@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { logout } from '../services/authService';
+import { getUserRole, logout } from '../services/authService';
 
 const LightningIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -12,6 +12,8 @@ const LightningIcon = () => (
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const isAdmin = getUserRole() === 'Admin';
+  console.log('isAdmin:', isAdmin, 'role:', getUserRole());
 
   const handleLogout = () => {
     logout();
@@ -27,7 +29,7 @@ const Navbar = () => {
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/cars">Cars</Link>
         <Link to="/planRequest">Planner</Link>
-        <Link to="/chargers">Chargers</Link>
+        {isAdmin && <Link to="/chargers">Chargers</Link>}
       </div>
       <button onClick={handleLogout}>Logout</button>
     </nav>

@@ -4,6 +4,7 @@ using EVChargePlanner.Domain;
 using EVChargePlanner.Domain.Services;
 using EVChargePlanner.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace EVChargePlanner.Api.Controllers;
 
@@ -27,8 +28,9 @@ public class ChargingPlanController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<List<CarChargingPlan>>> GetPlan(ChargingPlanRequest request)
     {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var carIds = request.Cars.Select(c => c.CarId).ToList();
-        var cars = await _context.Cars.Where(c => carIds.Contains(c.Id)).ToListAsync();
+        var cars = await _context.Cars.Where(c => carIds.Contains(c.Id) && c.UserId == userId).ToListAsync();
 
         foreach (var carRequest in request.Cars)
         {
@@ -106,8 +108,20 @@ public class ChargingPlanController : ControllerBase
     [HttpPost("confirm")]
     public async Task<ActionResult> ConfirmPlan(ConfirmPlanRequest request)
     {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var carIds = request.Sessions.Select(s => s.CarId).ToList();
+        var validCarIds = await _context.Cars
+            .Where(c => carIds.Contains(c.Id) && c.UserId == userId)
+            .Select(c => c.Id)
+            .ToListAsync();
+
         foreach (var s in request.Sessions)
         {
+            if (!validCarIds.Contains(s.CarId))
+            {
+                return Forbid();
+            }
+
             _context.ChargingSessions.Add(new ChargingSession
             {
                 CarId = s.CarId,
@@ -126,7 +140,9 @@ public class ChargingPlanController : ControllerBase
     [HttpGet("today")]
     public async Task<ActionResult> GetTodaySessions()
     {
+        var userID = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var today = DateTime.Today;
+
         var sessions = await _context.ChargingSessions
             .Include(s => s.Car)
             .Include(s => s.Charger)
@@ -148,7 +164,12 @@ public class ChargingPlanController : ControllerBase
     [HttpDelete("sessions/{id}")]
     public async Task<IActionResult> DeleteSession(int id)
     {
-        var session = await _context.ChargingSessions.FindAsync(id);
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        var session = await _context.ChargingSessions
+            .Include(s => s.Car)
+            .FirstOrDefaultAsync(s => s.Id == id && s.Car!.UserId == userId);
+        
         if (session == null)
         {
             return NotFound();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../services/authService';
 
 const LoginPage = () => {
@@ -33,7 +33,11 @@ const LoginPage = () => {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </div>
       <button type="submit">Login</button>
+      <p>
+        Don't have an account? <Link to="/register">Register</Link>
+      </p>
     </form>
+    
   );
 };
 

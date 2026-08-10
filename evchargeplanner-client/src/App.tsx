@@ -5,6 +5,7 @@ import { isAuthenticated } from './services/authService';
 import CarsPage from './pages/CarsPages';
 import PlanRequestPage from './pages/PlanRequestPage';
 import ChargersPage from './pages/ChargersPage';
+import RegisterPage from './pages/RegisterPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated() ? children : <Navigate to="/login" />;
@@ -15,6 +16,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route
           path="/dashboard"
           element={

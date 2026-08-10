@@ -3,6 +3,7 @@ using System;
 using EVChargePlanner.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EVChargePlanner.Infrastructure.Migrations
 {
     [DbContext(typeof(EVChargePlannerDbContext))]
-    partial class EVChargePlannerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260810100148_AddRoleToUser")]
+    partial class AddRoleToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,9 +45,6 @@ namespace EVChargePlanner.Infrastructure.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
